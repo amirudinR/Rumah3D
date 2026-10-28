@@ -299,7 +299,7 @@ WALLS.find(w => w.id==='kiri').bukaan[0].s = 2.40;     // jendela R. tamu (z 2,4
 WALLS.find(w => w.id==='kanan').bukaan[0].s = 7.60;    // jendela KT 2 (z 7,60..8,80)
 WALLS.find(w => w.id==='kanan').bukaan[1].s = 9.10;    // ventilasi KM dalam
 WALLS.find(w => w.id==='rugekor').bukaan[0].s = 1.60;  // pintu KT 1 (x 1,60..2,40)
-WALLS.find(w => w.id==='rugekor').bukaan[1].s = 4.40;  // pintu KT 2 (x 4,40..5,20)
+WALLS.find(w => w.id==='rugekor').bukaan[1].s = 3.10;  // pintu KT 2 (x 3,10..3,90)
 
 /* ============ 2. RAB (hal. 4 PDF 6x10) ============ */
 /* Harga satuan = pasar Oktober 2026 (Kediri/Jawa Timur). Volume dihitung dari denah 6 x 10 m.
@@ -527,12 +527,19 @@ function buildStructure(){
   const hS = .30, yS = -.45;
   GRID_Y.forEach(y => box(W,hS,.20, mat.beton(), W/2,yS,y, G.struct));
   GRID_X.forEach(x => box(.20,hS,D, mat.beton(), x,yS,D/2, G.struct));
+  // plinth 30 cm menutup celah sloof atas (-0,30) ke lantai (0,00) di keliling bangunan
+  const hP = M.lantai - M.tanah, yP = (M.lantai + M.tanah)/2;
+  [0, D].forEach(z => box(W,hP,.24, mat.beton2(), W/2,yP,z, G.struct));
+  [0, W].forEach(x => box(.24,hP,D, mat.beton2(), x,yP,D/2, G.struct));
   const hK = M.atasDak - M.bawahSloof;
   GRID_X.forEach(x => GRID_Y.forEach(y => box(.20,hK,.20, mat.beton2(), x, M.bawahSloof+hK/2, y, G.struct)));
   GRID_Y.forEach(y => box(W,.30,.15, mat.beton2(), W/2, M.bawahBalok+.15, y, G.struct));
   GRID_X.forEach(x => box(.15,.30,D, mat.beton2(), x, M.bawahBalok+.15, D/2, G.struct));
-  // stek 50 cm
-  GRID_X.forEach(x => GRID_Y.forEach(y => box(.20,.50,.20, mat.stek(), x, M.atasDak+.25, y, G.struct)));
+  // stek 50 cm: 4 batang D13 di tiap titik kolom (bukan balok beton 20x20)
+  GRID_X.forEach(x => GRID_Y.forEach(y => {
+    [[-.07,-.07],[.07,-.07],[-.07,.07],[.07,.07]].forEach(([dx,dz]) =>
+      box(.035,.50,.035, mat.stek(), x+dx, M.atasDak+.25, y+dz, G.struct));
+  }));
   // plat dak 12 cm miring 1% ke belakang, dicor penuh (sama dengan PDF 6x10)
   const tilt = Math.atan(0.01);
   const dY = (z) => M.atasDak - M.tebalDak/2 - z*0.01 + 0.06;
@@ -568,12 +575,12 @@ function buildTeras(){
   box(W,.30,.15, mat.beton2(), W/2, M.bawahBalok+.15, -TERAS+.075, G.dak);
   box(.15,.30,TERAS, mat.beton2(), .075, M.bawahBalok+.15, -TERAS/2, G.dak);
   box(.15,.30,TERAS, mat.beton2(), W-.075, M.bawahBalok+.15, -TERAS/2, G.dak);
-  // kolom teras di tepi depan (2 titik, 15/15) - berdiri di atas lantai teras, bukan menggantung
-  [0.15, W-.15].forEach(x => box(.15, M.atasDak-M.bawahBalok, .15, mat.beton2(),
-    x, (M.atasDak+M.bawahBalok)/2, -TERAS+.15, G.struct));
-  // lantai teras
-  const fl = new THREE.Mesh(new THREE.BoxGeometry(W-.3, .10, TERAS-.1), mat.beton());
-  fl.position.set(W/2, y-.05, -TERAS/2);
+  // kolom teras 15/15 dari tanah (-0,30) sampai bawah balok tepi (2,85)
+  [0.15, W-.15].forEach(x => box(.15, M.bawahBalok-M.tanah, .15, mat.beton2(),
+    x, (M.bawahBalok+M.tanah)/2, -TERAS+.15, G.struct));
+  // lantai teras turun sampai tanah, bukan menggantung 20 cm
+  const fl = new THREE.Mesh(new THREE.BoxGeometry(W-.3, M.lantai-M.tanah, TERAS-.1), mat.beton());
+  fl.position.set(W/2, (y+M.tanah)/2, -TERAS/2);
   fl.receiveShadow = true;
   G.site.add(fl);
 }
@@ -656,7 +663,7 @@ function buildRooms(){
       new THREE.BoxGeometry(r.x1-r.x0-T, .05, r.y1-r.y0-T),
       new THREE.MeshStandardMaterial({ color:r.warna, roughness:.85 })
     );
-    floor.position.set((r.x0+r.x1)/2, -.025, (r.y0+r.y1)/2);
+    floor.position.set((r.x0+r.x1)/2, r.id === 'kmd' ? -.019 : -.025, (r.y0+r.y1)/2);
     floor.receiveShadow = true;
     floor.userData.room = r;
     G.rooms.add(floor);
@@ -697,10 +704,10 @@ function buildFurniture(){
   put(.50,2.0,.70, mat.kayu(), .40,1.0,7.20);            // lemari
   put(.90,.75,.45, mat.kayu(), 2.20,.375,7.00);          // meja belajar
   // KT 2 utama (3,00..6,00 | 6,50..10,00); KM dalam (4,50..6,00 | 8,60..10,00)
-  put(1.60,.40,2.00, mat.kasur(), 3.90,.20,8.55);        // kasur 160 x 200
-  put(1.60,.25,.06, mat.kayu(), 3.90,.40,9.56);          // headboard
-  put(.45,.55,.45, mat.kayu(), 3.30,.275,9.60);          // nakas
-  put(.50,2.0,.70, mat.kayu(), 3.30,1.0,7.20);           // lemari
+  // kasur 160 x 200, kepala di dinding kanan (x=6,00) supaya tidak menabrak KM dalam
+  put(2.00,.40,1.60, mat.kasur(), 4.94,.20,7.36);
+  put(.06,.25,1.60, mat.kayu(), 5.91,.40,7.36);          // headboard
+  put(.50,2.0,.70, mat.kayu(), 3.31,1.0,9.59);           // lemari di sudut belakang kiri
   // KM luar (4,50..6,00 | 3,50..5,30) + KM dalam (4,50..6,00 | 8,60..10,00)
   put(.40,.40,.60, mat.bak(), 4.80,.20,4.60);
   put(.40,.40,.60, mat.bak(), 4.80,.20,9.10);
@@ -834,7 +841,13 @@ function buildEnvironment(){
   };
   [[-3.2,0.5],[-3.2,2.2],[-3.2,4.0],[-3.2,6.5],[-3.2,9.0],[9.2,2.0],[9.2,4.5],[9.2,9.2]]
     .forEach(([x,z]) => bush(x, z, .38));
-  [0.6, W-0.6].forEach(x => box(.55,.55,.55, mat.rumput(), x, .275, -TERAS+.42, G.env));
+  [0.6, W-0.6].forEach(x => {
+    box(.42,.42,.42, mat.beton2(), x, M.tanah+.21, -TERAS+.42, G.env);      // pot beton
+    const f = new THREE.Mesh(new THREE.IcosahedronGeometry(.26,0), mat.daun());
+    f.position.set(x, M.tanah+.62, -TERAS+.42);
+    f.castShadow = true;
+    G.env.add(f);
+  });
 
   // pagar beton keliling pekarangan (dengan celah gerbang di depan)
   const px0 = -3.4, px1 = W+3.4, pz0 = -9.0, pz1 = D+3.0;
@@ -900,7 +913,7 @@ function buildDims(){
 
 /* ---- lantai 2: dibangun bertahap, tiap bagian bisa disembunyikan ---- */
 let lv2Built = false;
-const L2 = { atas:1.32, dX0:0, dX1:W, dZ0:0, dZ1:D };   // atas dak = +3,15 (lantai 2 +0,00)
+const L2 = { atas:3.15, dX0:0, dX1:W, dZ0:0, dZ1:D };   // atas dak = +3,15 (lantai 2 +0,00)
 function l2Group(){
   if (!G.l2){
     G.l2 = new THREE.Group();
@@ -931,7 +944,7 @@ function buildLevel2(){
   // 2. kolom lantai 2 (20/20) 3,0 m
   L2.kolom = new THREE.Group(); g.add(L2.kolom);
   GRID_X.forEach(x => GRID_Y.forEach(z =>
-    box(.20,3.0,.20, mBeton2, x, base+.60+1.5, z, L2.kolom)));
+    box(.20,3.0,.20, mBeton2, x, base+.30+1.5, z, L2.kolom)));
 
   // 3. dinding lantai 2 (luar + 1 sekat) + jendela
   L2.dinding = new THREE.Group(); g.add(L2.dinding);
@@ -945,8 +958,8 @@ function buildLevel2(){
     const len = w.e - w.s;
     const mesh = wallSegment(len, 2.9, T, w.b.map(o => ({...o})), mWall);
     mesh.material.clippingPlanes = null; mesh.material.clipShadows = false;
-    if (w.arah === 'h') mesh.position.set(w.s, base+.60, w.off);
-    else { mesh.rotation.y = -Math.PI/2; mesh.position.set(w.off, base+.60, w.s); }
+    if (w.arah === 'h') mesh.position.set(w.s, base+.30, w.off);
+    else { mesh.rotation.y = -Math.PI/2; mesh.position.set(w.off, base+.30, w.s); }
     L2.dinding.add(mesh);
     w.b.forEach(o => {
       const grp = new THREE.Group();
@@ -955,32 +968,32 @@ function buildLevel2(){
       fr.position.set(0, o.b + o.h/2, 0);
       gl.position.set(0, o.b + o.h/2, .01);
       grp.add(fr, gl);
-      if (w.arah === 'h') grp.position.set(w.s + o.s + o.w/2, base+.60, w.off);
-      else { grp.rotation.y = -Math.PI/2; grp.position.set(w.off, base+.60, w.s + o.s + o.w/2); }
+      if (w.arah === 'h') grp.position.set(w.s + o.s + o.w/2, base+.30, w.off);
+      else { grp.rotation.y = -Math.PI/2; grp.position.set(w.off, base+.30, w.s + o.s + o.w/2); }
       L2.dinding.add(grp);
     });
   });
   const sek = wallSegment(3.50, 2.9, T, [{ s:1.20, w:0.80, b:0, h:2.10, jenis:'pintu' }], mWall);
   sek.material.clippingPlanes = null; sek.material.clipShadows = false;
-  sek.rotation.y = -Math.PI/2; sek.position.set(3.00, base+.60, 6.50);
+  sek.rotation.y = -Math.PI/2; sek.position.set(3.00, base+.30, 6.50);
   L2.dinding.add(sek);
 
-  // 4. tangga beton 16 anak tangga menuju rencana bukaan 0,90 x 2,60
+  // 4. tangga beton 16 anak tangga menuju rencana bukaan 0,90 x 2,60 (z 3,70..6,30)
   L2.tangga = new THREE.Group(); g.add(L2.tangga);
-  const n = 16, rise = 3.15 / n, run = 0.25;
+  const n = 16, rise = 3.45 / n, run = 2.60 / n;
   for (let k = 0; k < n; k++)
-    box(0.90, rise, run, mBeton, 3.75, k*rise + rise/2, 6.10 - k*run - run/2, L2.tangga);
+    box(0.90, rise, run, mBeton, 3.75, k*rise + rise/2, 6.30 - k*run - run/2, L2.tangga);
 
   // 5. atap baja ringan + lisplang
   L2.atap = new THREE.Group(); g.add(L2.atap);
-  box(W+.9, .14, D+.9, mAtap, W/2, base+.60+2.95, D/2, L2.atap);
-  box(W+.9, .22, .06, mat.kusen(), W/2, base+.60+2.84, -.45, L2.atap);
-  box(W+.9, .22, .06, mat.kusen(), W/2, base+.60+2.84, D+.45, L2.atap);
+  box(W+.9, .14, D+.9, mAtap, W/2, base+.30+2.95, D/2, L2.atap);
+  box(W+.9, .22, .06, mat.kusen(), W/2, base+.30+2.84, -.45, L2.atap);
+  box(W+.9, .22, .06, mat.kusen(), W/2, base+.30+2.84, D+.45, L2.atap);
 
-  // 6. lantai 2 (keramik di atas dak lama)
+  // 6. lantai 2 keramik, rata dengan atas ring balok (base+0,30)
   L2.lantai = new THREE.Group(); g.add(L2.lantai);
-  const fl = new THREE.Mesh(new THREE.BoxGeometry(W-.4, .05, D-.4), mTile);
-  fl.position.set(W/2, base+.03, D/2);
+  const fl = new THREE.Mesh(new THREE.BoxGeometry(W, .05, D), mTile);
+  fl.position.set(W/2, base+.275, D/2);
   fl.receiveShadow = true;
   L2.lantai.add(fl);
 }
@@ -1183,6 +1196,7 @@ function renderProg(){
 function applyProgressVisual(p){
   const lvl = p <= 0 ? 0 : p < 13 ? 1 : p < 22 ? 2 : p < 44 ? 3 : p < 65 ? 4 : 5;
   G.walls.visible = lvl >= 3 && !rebarOn;
+  G.rooms.visible = lvl >= 3;
   G.plat.visible  = lvl >= 4 && !rebarOn && p <= 100;
   G.dak.visible   = lvl >= 4 && !rebarOn && p <= 100;
   G.furn.visible  = lvl >= 5;
