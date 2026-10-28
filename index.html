@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulator 3D Rumah 5x10 - Dak Siap Lantai 2</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  :root{
+    --bg:#101317; --panel:#181d23; --panel2:#1f252c; --line:#2c343d;
+    --txt:#e6eaee; --dim:#93a0ad; --acc:#5ec8a0; --warn:#e3b341; --bad:#e06c75;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--txt);font:13px/1.45 "Segoe UI",system-ui,-apple-system,sans-serif;display:flex;overflow:hidden}
+  #view{position:relative;flex:1;min-width:0}
+  #view canvas{display:block;width:100%;height:100%}
+  #topbar{position:absolute;left:0;right:0;top:0;padding:10px 12px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;
+    background:linear-gradient(#0b0e11dd,#0b0e1100);pointer-events:none}
+  #topbar > *{pointer-events:auto}
+  .brand{font-weight:600;letter-spacing:.2px;margin-right:6px}
+  .brand small{color:var(--dim);font-weight:400;margin-left:6px}
+  .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--txt);cursor:pointer;font:inherit}
+  .pill:hover{border-color:#41505d}
+  .pill.on{background:#24483c;border-color:#3f7f66;color:#c9f5e2}
+  #labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .rlabel{position:absolute;transform:translate(-50%,-50%);background:#0b0e11cc;border:1px solid #3f7f66;
+    border-radius:8px;padding:3px 8px;font-size:11px;line-height:1.25;white-space:nowrap;text-align:center}
+  .rlabel b{display:block;font-size:11.5px;color:#e9f6f0;font-weight:600}
+  .rlabel span{color:#9fd9c2}
+  #labels.close .rlabel{opacity:.35;transform:translate(-50%,-50%) scale(.8)}
+  .rlabel.off{display:none!important}
+  #hint{position:absolute;left:12px;bottom:10px;color:var(--dim);font-size:11.5px;background:#0b0e11bb;padding:5px 9px;border-radius:6px;pointer-events:none}
+  #crosshair{display:none;position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#fff;opacity:.85;box-shadow:0 0 0 2px #0006}
+  #fpsbar{display:none;position:absolute;left:50%;transform:translateX(-50%);bottom:12px;background:#0b0e11cc;padding:6px 12px;border-radius:8px;color:var(--dim);font-size:12px}
+  #panel{width:376px;flex:0 0 376px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;height:100%;overflow:hidden}
+  #panel header{padding:12px 14px;border-bottom:1px solid var(--line)}
+  #panel header h1{font-size:14px;margin:0 0 2px}
+  #panel header p{margin:0;color:var(--dim);font-size:11.5px}
+  #scroll{overflow-y:auto;padding:10px 14px 30px;flex:1}
+  #scroll::-webkit-scrollbar{width:9px}
+  #scroll::-webkit-scrollbar-thumb{background:#2e3742;border-radius:9px}
+  details{border:1px solid var(--line);border-radius:8px;margin-bottom:9px;background:var(--panel2)}
+  details[open]{background:#1b2127}
+  summary{cursor:pointer;padding:8px 11px;font-weight:600;font-size:12.5px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";color:var(--dim);font-weight:400;font-size:15px}
+  details[open] summary::after{content:"\2212"}
+  .body{padding:0 11px 11px}
+  .row{display:flex;gap:8px;align-items:center;margin:7px 0}
+  .row > label{flex:0 0 128px;color:var(--dim);font-size:12px}
+  .row > input[type=range]{flex:1;accent-color:var(--acc);min-width:0}
+  .row .val{width:54px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px}
+  .row.wrap{flex-wrap:wrap}
+  .row.wrap > label{flex:0 0 100%}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+  .grid2 button{padding:7px 8px;border-radius:7px;border:1px solid var(--line);background:#232b33;color:var(--txt);cursor:pointer;font:inherit;font-size:12px}
+  .grid2 button:hover{border-color:#41505d;background:#28313a}
+  .grid2 button.on{background:#24483c;border-color:#3f7f66}
+  .big{display:flex;align-items:baseline;justify-content:space-between;margin:2px 0}
+  .big b{font-size:19px;font-variant-numeric:tabular-nums}
+  .big span{color:var(--dim);font-size:11.5px}
+  .line{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;color:var(--dim)}
+  .line strong{color:var(--txt);font-weight:500;font-variant-numeric:tabular-nums}
+  .sep{height:1px;background:var(--line);margin:8px 0}
+  table{width:100%;border-collapse:collapse;font-size:11.5px}
+  th,td{padding:4px 5px;text-align:left;border-bottom:1px solid #262e36}
+  th{color:var(--dim);font-weight:500;font-size:11px;position:sticky;top:0;background:#1b2127}
+  td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:#232b33}
+  tbody tr.hl{background:#2c4a3f}
+  tr.grp td{color:var(--acc);font-weight:600;font-size:11px;letter-spacing:.4px;cursor:default;background:none}
+  .chips{display:flex;flex-wrap:wrap;gap:5px}
+  .chip{padding:4px 9px;border-radius:999px;border:1px solid var(--line);background:#232b33;cursor:pointer;font-size:11.5px}
+  .chip.on{background:#24483c;border-color:#3f7f66}
+  #info{border-left:2px solid var(--acc);padding:6px 10px;background:#1d2a26;border-radius:0 6px 6px 0;font-size:12px;min-height:34px}
+  #info b{display:block;margin-bottom:2px}
+  #info b.ins{display:inline;margin:0;color:#c9f5e2}
+  .note{color:var(--dim);font-size:11px;margin-top:8px;line-height:1.4}
+  .progress{height:9px;border-radius:99px;background:#232b33;overflow:hidden;margin:2px 0 9px}
+  .progress > div{height:100%;background:linear-gradient(90deg,#3f7f66,#5ec8a0);transition:width .15s linear}
+  .stageList{display:flex;flex-direction:column;gap:3px}
+  .stage{display:flex;align-items:center;gap:7px;padding:4px 7px;border-radius:6px;font-size:11.5px;color:var(--dim);cursor:pointer}
+  .stage:hover{background:#232b33}
+  .stage.now{background:#24483c;color:#d8f5ea;font-weight:600}
+  .stage.done{color:#7fb9a3}
+  .stage .dot{width:7px;height:7px;border-radius:50%;background:#3a434c;flex:0 0 7px}
+  .stage.done .dot{background:#5ec8a0}
+  .stage.now .dot{background:#fff}
+  .stage .nm{flex:1}
+  .stage .pct{font-variant-numeric:tabular-nums;font-size:11px}
+  .stage .bar{flex:0 0 54px;height:4px;border-radius:99px;background:#2c343d;overflow:hidden}
+  .stage .bar i{display:block;height:100%;background:#5ec8a0}
+  .stageHead{font-size:10.5px;color:var(--acc);letter-spacing:.4px;margin:7px 0 2px;padding-left:2px}
+  .matList{margin:5px 0 0;padding:0;list-style:none;font-size:11.5px;color:#cfd8e0}
+  .matList li{padding:2px 0 2px 13px;position:relative}
+  .matList li::before{content:"\2022";position:absolute;left:2px;color:var(--acc)}
+  .warn{color:var(--warn)}
+  #err{position:absolute;inset:0;display:none;place-items:center;background:#101317;z-index:9;padding:24px;text-align:center}
+  #err div{max-width:430px;line-height:1.6}
+</style>
+</head>
+<body>
+<div id="view">
+  <canvas id="c"></canvas>
+  <div id="topbar">
+    <div class="brand">Rumah 5 &times; 10 m <small>dak beton siap lantai 2</small></div>
+    <button class="pill" data-view="iso">Isometri</button>
+    <button class="pill" data-view="front">Depan</button>
+    <button class="pill" data-view="top">Atas</button>
+    <button class="pill" data-view="wide">Menyeluruh</button>
+    <button class="pill" id="btnSolo">Masuk ruang</button>
+    <button class="pill" id="btnFps">Jalan (WASD)</button>
+  </div>
+  <div id="labels"></div>
+  <div id="crosshair"></div>
+  <div id="fpsbar">WASD jalan &middot; Q/E turun-naik &middot; Shift lari &middot; Esc keluar</div>
+  <div id="hint">Drag kiri putar &middot; drag kanan geser &middot; scroll zoom &middot; klik ruangan untuk info</div>
+  <div id="err"><div>
+    <b>Three.js tidak bisa dimuat dari CDN.</b><br>
+    Buka file ini saat ada koneksi internet, atau minta versi offline (three.js disimpan lokal).
+  </div></div>
+</div>
+
+<aside id="panel">
+  <header>
+    <h1>Simulator &amp; RAB</h1>
+    <p>Konsep awal &mdash; wajib dicek arsitek &amp; ahli struktur</p>
+  </header>
+  <div id="scroll">
+    <details open>
+      <summary>Biaya</summary>
+      <div class="body">
+        <div class="big"><b id="cTotal">-</b><span id="cPer">-</span></div>
+        <div class="sep"></div>
+        <div class="line"><span>Tahap 1 (pondasi &rarr; dak + dinding)</span><strong id="cS1">-</strong></div>
+        <div class="line"><span>Tahap 2 (finishing)</span><strong id="cS2">-</strong></div>
+        <div class="line"><span>Subtotal</span><strong id="cSub">-</strong></div>
+        <div class="line"><span>Cadangan 10%</span><strong id="cCad">-</strong></div>
+        <div class="sep"></div>
+        <div class="row"><label>Harga besi</label><input type="range" id="mBesi" min="70" max="150" value="100"><span class="val" id="vBesi">1.00x</span></div>
+        <div class="row"><label>Harga semen</label><input type="range" id="mSemen" min="70" max="150" value="100"><span class="val" id="vSemen">1.00x</span></div>
+        <div class="row"><label>Harga umum</label><input type="range" id="mUmum" min="70" max="150" value="100"><span class="val" id="vUmum">1.00x</span></div>
+        <div class="row"><label>Upah tukang</label><input type="range" id="mUpah" min="70" max="150" value="100"><span class="val" id="vUpah">1.00x</span></div>
+        <div class="row wrap"><label>Finishing</label>
+          <div class="chips" id="chipsFin">
+            <div class="chip on" data-fin="0">Keramik</div>
+            <div class="chip" data-fin="1">Granit</div>
+            <div class="chip" data-fin="2">Granit + kusen alu/kayu</div>
+          </div>
+        </div>
+        <div class="row wrap"><label>Atap</label>
+          <div class="chips" id="chipsAtap">
+            <div class="chip on" data-atap="dak">Dak beton (siap lantai 2)</div>
+            <div class="chip" data-atap="baja">Baja ringan</div>
+          </div>
+        </div>
+        <div class="note" id="finNote"></div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Rincian bahan &amp; upah</summary>
+      <div class="body" style="padding-left:0;padding-right:0">
+        <table>
+          <thead><tr><th>Uraian</th><th class="n">Vol</th><th class="n">Harga</th><th class="n">Jumlah</th></tr></thead>
+          <tbody id="rab"></tbody>
+        </table>
+        <div class="note" style="padding:0 11px">
+          Klik baris untuk menyorot bagian bangunan terkait. Harga yang benar-benar dicek hanya
+          semen Gresik Rp 70.000/sak dan MU-380 Rp 157.500 (daftar Maret 2026).
+        </div>
+      </div>
+    </details>
+
+    <details open>
+      <summary>Progres &amp; jadwal</summary>
+      <div class="body">
+        <div class="row"><label>Progres</label><input type="range" id="prog" min="0" max="200" value="0" step="1"><span class="val" id="vProg">0%</span></div>
+        <div class="chips" id="progJump" style="margin:-2px 0 8px">
+          <div class="chip" data-p="0">0%</div><div class="chip" data-p="25">25%</div><div class="chip" data-p="50">50%</div>
+          <div class="chip" data-p="75">75%</div><div class="chip" data-p="100">100%</div><div class="chip" data-p="150">150%</div><div class="chip" data-p="200">200%</div>
+        </div>
+        <div class="progress"><div id="progBar" style="width:1%"></div></div>
+        <div class="stageList" id="stages"></div>
+        <div class="sep"></div>
+        <div class="line"><span>Biaya sesuai progres</span><strong id="pCost">-</strong></div>
+        <div class="line"><span>Sisa biaya</span><strong id="pRest">-</strong></div>
+        <div class="line"><span>Perkiraan waktu</span><strong id="pTime">-</strong></div>
+        <div class="line"><span>Tahap &amp; bahan saat ini</span><strong id="pNow" style="text-align:right">-</strong></div>
+        <div class="note" id="pNote"></div>
+        <div class="note warn">Durasi = perkiraan lapangan untuk 50 m2 dengan tim kecil (4-6 orang). Musim hujan, stok besi, dan uji tanah bisa menambah 20-40%.</div>
+      </div>
+    </details>
+
+    <details open>
+      <summary>Kontrol bangunan</summary>
+      <div class="body">
+        <div class="row"><label>Potongan (cutaway)</label><input type="range" id="cut" min="0" max="330" value="330"><span class="val" id="vCut">penuh</span></div>
+        <div class="row"><label>Lantai 2 naik</label><input type="range" id="lv2" min="0" max="100" value="0"><span class="val" id="vLv2">0%</span></div>
+        <div class="grid2">
+          <button id="btnRebar">Bongkar beton</button>
+          <button id="btnXray">X-ray dinding</button>
+          <button id="btnLabels">Label ruang</button>
+          <button id="btnDims">Dimensi</button>
+        </div>
+        <div class="row" style="margin-top:10px"><label>Jam</label><input type="range" id="sun" min="6" max="18" value="10"><span class="val" id="vSun">10:00</span></div>
+      </div>
+    </details>
+
+    <details open>
+      <summary>Info</summary>
+      <div class="body">
+        <div id="info">Klik ruangan atau baris biaya untuk melihat detail.</div>
+        <div class="note" id="luasNote"></div>
+      </div>
+    </details>
+
+    <div class="note warn">
+      Semua angka biaya estimasi, bukan penawaran. Ukuran struktur (footplat, kolom, balok, tulangan)
+      usulan awal: hitungan final harus dibuat ahli struktur setelah uji tanah. Dak aman sebagai atap,
+      belum otomatis aman sebagai lantai 2.
+    </div>
+  </div>
+</aside>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+/* ============ 1. DATA (dari PDF hal. 2-7) ============ */
+const M = { tanah:-0.30, lantai:0, bawahBalok:2.85, atasDak:3.15, stek:3.65,
+            dasarFootplat:-1.50, bawahSloof:-0.60, tebalDak:0.12, tinggi:3.0 };
+const T = 0.12, W = 5.00, D = 10.00;   // denah 5 x 10 m = 50 m2
+const GRID_X = [0, 2.00, 5.00], GRID_Y = [0, 3.20, 5.60, 8.20, 10.00];
+
+const ROOMS = [
+  { id:'tamu',   nama:'Ruang tamu',        x0:0,    x1:5.00, y0:0,    y1:3.20, luas:16.00, warna:0x6f8fa8 },
+  { id:'rug',    nama:'R. keluarga+makan', x0:0,    x1:5.00, y0:3.20, y1:5.60, luas:12.00, warna:0xa8905f },
+  { id:'kml',    nama:'KM luar',           x0:0,    x1:1.80, y0:5.60, y1:7.20, luas:2.88, warna:0x5fa39b },
+  { id:'gudang', nama:'Gudang',            x0:0,    x1:1.80, y0:7.20, y1:8.20, luas:1.80, warna:0x8f8f6f },
+  { id:'tidur',  nama:'Kamar orang tua',   x0:1.80, x1:5.00, y0:5.60, y1:8.20, luas:8.32, warna:0x8a7fa8 },
+  { id:'kmd',    nama:'KM dalam',          x0:3.40, x1:5.00, y0:6.60, y1:8.20, luas:2.56, warna:0x5fa39b },
+  { id:'dap',    nama:'Dapur + kulkas',    x0:0,    x1:5.00, y0:8.20, y1:10.00, luas:9.00, warna:0xa8705f }
+];
+const NOTE = {
+  tamu:'Ruang tamu 5,00 x 3,20 di depan, langsung dari pintu utama. Cukup untuk sofa tamu + TV.',
+  rug:'Ruang keluarga + makan 5,00 x 2,40 di tengah. Bukaan tangga ke lantai 2 ada di sini (1,20 x 1,40).',
+  kml:'KM luar 1,80 x 1,60 untuk tamu. Lantai turun 5 cm, miring ke floor drain, waterproofing sebelum keramik.',
+  gudang:'Gudang 1,80 x 1,00 di belakang KM luar, akses dari dapur. Ventilasi atas, tanpa jendela. Pintu 0,80 m.',
+  tidur:'Kamar orang tua 3,20 x 2,60 = 8,3 m2. Kasur 160 x 200 memanjang, jalan kaki 0,60 m. KM dalam 1,60 x 1,60 di sudut belakang kanan.',
+  kmd:'KM dalam 1,60 x 1,60 di sudut belakang kanan kamar. Pintu 70 cm dari dalam kamar.',
+  dap:'Dapur + kulkas + ruang makan 5,00 x 1,80 di belakang. Deret kompor + wastafel 0,60 m, kulkas 0,65 x 0,70, meja makan, sisa jalan 1,20 m.'
+};
+
+const door = (w,h=2.10) => ({ w, b:0, h, jenis:'pintu' });
+const win  = (w=1.0,h=1.2) => ({ w, b:0.90, h, jenis:'jendela' });
+const vent = () => ({ w:0.60, b:1.70, h:0.40, jenis:'ventilasi' });
+
+const WALLS = [
+  { id:'depan',     arah:'h', off:0,    s:0, e:W, luar:true, bukaan:[door(0.90), win(1.4)] },
+  { id:'belakang',  arah:'h', off:D,    s:0, e:W, luar:true, bukaan:[win(1.2), win(1.0)] },
+  { id:'kiri',      arah:'v', off:0,    s:0, e:D, luar:true, bukaan:[win(1.2), win(1.2), win(0.6)] },
+  { id:'kanan',     arah:'v', off:W,    s:0, e:D, luar:true, bukaan:[win(1.2), win(1.2), win(0.8), vent()] },
+  // sekat dalam (semua di atas grid as, tidak ada segmen yang menembus dinding lain)
+  { id:'tamurug',   arah:'h', off:3.20, s:0,    e:W,    bukaan:[{ s:1.00, w:2.00, b:0, h:2.30, jenis:'bukaan' }] },
+  { id:'rugkm',     arah:'h', off:5.60, s:0,    e:1.80, bukaan:[door(0.80)] },    // rug -> KM luar
+  { id:'rugtidur',  arah:'h', off:5.60, s:1.80, e:W,    bukaan:[door(0.85)] },    // rug -> kamar
+  { id:'kmldinding',arah:'v', off:1.80, s:5.60, e:8.20, bukaan:[] },              // KM luar + gudang | kamar
+  { id:'kmlgudang', arah:'h', off:7.20, s:0,    e:1.80, bukaan:[] },              // KM luar | gudang
+  { id:'dapkiri',   arah:'h', off:8.20, s:0,    e:1.80, bukaan:[door(0.80)] },    // gudang -> dapur
+  { id:'dapkamar',  arah:'h', off:8.20, s:1.80, e:W,    bukaan:[door(0.85)] },    // kamar -> dapur
+  { id:'kmdh',      arah:'h', off:6.60, s:3.40, e:W,    bukaan:[] },              // KM dalam kamar
+  { id:'kmdv',      arah:'v', off:3.40, s:6.60, e:8.20, bukaan:[door(0.70)] }
+];
+// posisi bukaan (relatif ke awal dinding)
+WALLS.find(w => w.id==='depan').bukaan[0].s = 0.60;    // pintu utama
+WALLS.find(w => w.id==='depan').bukaan[1].s = 3.00;    // jendela ruang tamu (x 3,00..4,40)
+WALLS.find(w => w.id==='belakang').bukaan[0].s = 0.60; // jendela dapur
+WALLS.find(w => w.id==='belakang').bukaan[1].s = 3.20; // jendela KM dalam
+WALLS.find(w => w.id==='kiri').bukaan[0].s = 0.80;     // jendela ruang tamu
+WALLS.find(w => w.id==='kiri').bukaan[1].s = 3.70;     // jendela ruang keluarga
+WALLS.find(w => w.id==='kiri').bukaan[2].s = 5.90;     // jendela KM luar
+WALLS.find(w => w.id==='kanan').bukaan[0].s = 0.80;    // jendela ruang tamu
+WALLS.find(w => w.id==='kanan').bukaan[1].s = 3.70;    // jendela ruang keluarga
+WALLS.find(w => w.id==='kanan').bukaan[2].s = 5.90;    // jendela kamar (z 5,90..6,70)
+WALLS.find(w => w.id==='kanan').bukaan[3].s = 7.10;    // ventilasi KM dalam
+
+/* ============ 2. RAB (hal. 7) ============ */
+/* Harga satuan = harga pasar Oktober 2026 (supplier/toko online Jawa Timur),
+   dibulatkan. Sumber dicatat pada komentar tiap kelompok. */
+const RAB = [
+  { grp:'A. STRUKTUR DAN DAK', items:[
+    ['Beton K-250 campur sendiri (footplat, kolom, sloof, balok)', 10.2,'m3',1050000,'umum','struktur'],
+    ['Beton ready mix K-250 untuk dak 5,00 x 10,00', 6.6,'m3',1350000,'umum','dak'],
+    ['Truk mixer mini + talang/pompa', 1,'ls',1900000,'umum','dak'],
+    ['Besi tulangan ulir + polos (Rp 8.600/kg ulir, 2.250 kg)', 2250,'kg',8600,'besi','rebar'],
+    ['Kawat bendrat', 42,'kg',26000,'umum','rebar'],
+    ['Bekisting kolom, sloof, balok', 1,'ls',4200000,'umum','struktur'],
+    ['Bekisting dak + steger sewa', 1,'ls',5800000,'umum','dak'],
+    ['Rabat beton K-100 tebal 5 cm (lantai)', 2.5,'m3',850000,'umum','lantai'],
+    ['Urugan pasir + tanah (lantai naik 30 cm)', 1,'ls',2600000,'umum','lantai'],
+    ['Waterproofing dak + screed kemiringan', 55,'m2',85000,'umum','dak'],
+    ['Talang/pipa PVC 3 inci + aksesori (2 titik)', 1,'ls',1300000,'umum','dak']
+  ]},
+  { grp:'B. DINDING', items:[
+    ['Bata ringan 10 cm (Rp 650.000/m3 area Kediri)', 14.0,'m3',650000,'umum','dinding'],
+    ['Perekat bata ringan MU-380 40 kg (Rp 68.500/sak)', 18,'sak',68500,'semen','dinding'],
+    ['Bata merah/batako 30 cm bagian bawah dinding', 1,'ls',2100000,'umum','dinding'],
+    ['Plester + aci (semen, pasir, instan) dalam, luar, bawah dak', 1,'ls',5100000,'semen','dinding']
+  ]},
+  { grp:'C. PINTU, JENDELA, KERAMIK', items:[
+    ['Pintu utama (panel + kusen)', 1,'unit',2000000,'umum','bukaan'],
+    ['Pintu kamar tidur (panel)', 1,'unit',700000,'umum','bukaan'],
+    ['Pintu kamar mandi (PVC)', 2,'unit',400000,'umum','bukaan'],
+    ['Pintu gudang (panel)', 1,'unit',650000,'umum','bukaan'],
+    ['Jendela aluminium + kaca 5 mm (1,0 x 1,2 m)', 10,'unit',1000000,'umum','bukaan'],
+    ['Ventilasi kamar mandi', 2,'unit',200000,'umum','bukaan'],
+    ['Kunci, engsel, handle', 1,'ls',1700000,'umum','bukaan'],
+    ['Keramik 60x60 (Rp 95.000/m2 termasuk pasang bahan)', 88,'m2',95000,'umum','lantai']
+  ]},
+  { grp:'D. ELEKTRIK DAN PLUMBING', items:[
+    ['Instalasi listrik (kabel, saklar, MCB, lampu)', 1,'ls',2600000,'umum','bukaan'],
+    ['Plumbing air bersih + air kotor (PPR/PVC)', 1,'ls',2800000,'umum','bukaan'],
+    ['Septic tank + resapan', 1,'ls',3200000,'umum','bukaan'],
+    ['Waterproofing kamar mandi (2 KM)', 1,'ls',900000,'umum','bukaan']
+  ]},
+  { grp:'UPAH TUKANG', upah:true, items:[
+    ['Persiapan lahan + bouwplank', 1,'ls',1600000],
+    ['Galian tanah footplat dan sloof', 32,'m3',65000],
+    ['Pembesian, bekisting, pengecoran (pondasi sampai dak)', 17,'m3',2000000],
+    ['Pasang bata ringan', 145,'m2',55000],
+    ['Waterproofing dak', 1,'ls',800000],
+    ['Plester + aci', 330,'m2',45000],
+    ['Pasang keramik', 88,'m2',75000],
+    ['Pasang pintu dan jendela', 1,'ls',1800000],
+    ['Instalasi listrik', 1,'ls',1500000],
+    ['Plumbing + septic tank', 1,'ls',2500000],
+    ['Pengecatan', 330,'m2',22000]
+  ]}
+];
+const DAK_SAVE = 35000000;            // PDF: dak + struktur siap lantai 2 menambah 30-40 jt
+/* RAB ini dihitung ulang untuk rumah 5,00 x 10,00 (50 m2) - BUKAN angka PDF 5 x 7.
+   Pembagian tahap 1 : tahap 2 tetap 57% : 43% seperti PDF. */
+const BASE = { luas: 50, tahap1: 0.57, tahap2: 0.43 };
+
+/* ============ 3. RUPIAH ============ */
+const nf = new Intl.NumberFormat('id-ID', { maximumFractionDigits:0 });
+const rp = n => 'Rp ' + nf.format(Math.round(n));
+/* Satuan harga sudah disesuaikan ke harga Jawa Timur; tidak ada kalibrasi ke PDF lagi
+   karena luasan berbeda (50 m2 vs 35 m2). */
+const MULT = { besi:1, semen:1, umum:1, upah:1 };
+let FIN = 0, ATAP = 'dak';
+
+function hitungRAB(){
+  const on = { besi:MULT.besi, semen:MULT.semen, umum:MULT.umum, upah:MULT.upah };
+  const finM = [1, 1 + 15000000/175000000, 1 + 20000000/175000000][FIN];
+  if (FIN) on.umum *= finM;
+  let bahan = 0, upah = 0;
+  RAB.forEach(g => g.items.forEach(it => {
+    const [, vol, , rate, jenis] = it;
+    const m = g.upah ? on.upah : (on[jenis] ?? 1);
+    const v = vol * rate * m;
+    if (g.upah) upah += v; else bahan += v;
+  }));
+  if (ATAP === 'baja') bahan -= DAK_SAVE;
+  const sub = bahan + upah;
+  const total = sub * 1.1;
+  return { bahan, upah, sub, cad: sub * 0.1,
+           total, perM2: total / BASE.luas, finAdd: 0,
+           finM: FIN ? [0, 15000000, 20000000][FIN] : 0 };
+}
+
+/* ============ 4. SCENE ============ */
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.localClippingEnabled = true;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x141a20);
+scene.fog = new THREE.Fog(0x141a20, 48, 95);
+
+const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 200);
+camera.position.set(9.5, 7.5, 13);
+
+const cutPlane = new THREE.Plane(new THREE.Vector3(0,-1,0), 10);
+const CLIP = [cutPlane];
+
+const orbit = new OrbitControls(camera, canvas);
+orbit.target.set(W/2, 1.2, D/2);
+orbit.enableDamping = true;
+orbit.dampingFactor = 0.08;
+orbit.maxPolarAngle = Math.PI * 0.495;
+orbit.minDistance = 1.2;
+orbit.maxDistance = 48;
+
+scene.add(new THREE.HemisphereLight(0xdfe9f5, 0x2a2f36, 1.15));
+const sun = new THREE.DirectionalLight(0xfff3e0, 2.4);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048);
+const sc = sun.shadow.camera;
+sc.left = -14; sc.right = 14; sc.top = 14; sc.bottom = -14; sc.near = .5; sc.far = 70;
+sun.target.position.set(W/2, 0, D/2);
+scene.add(sun, sun.target);
+const fill = new THREE.DirectionalLight(0x88aaff, .45);
+fill.position.set(-8, 6, -8);
+scene.add(fill);
+
+const mat = {
+  dinding:  () => new THREE.MeshStandardMaterial({ color:0xeee9e1, roughness:.92, clippingPlanes:CLIP, clipShadows:true }),
+  sekat:    () => new THREE.MeshStandardMaterial({ color:0xd8d2c6, roughness:.92, clippingPlanes:CLIP, clipShadows:true }),
+  km:       () => new THREE.MeshStandardMaterial({ color:0xd8e9e6, roughness:.8,  clippingPlanes:CLIP, clipShadows:true }),
+  beton:    () => new THREE.MeshStandardMaterial({ color:0xb9bcbf, roughness:.85, clippingPlanes:CLIP, clipShadows:true }),
+  beton2:   () => new THREE.MeshStandardMaterial({ color:0x9198a0, roughness:.9,  clippingPlanes:CLIP, clipShadows:true }),
+  stek:     () => new THREE.MeshStandardMaterial({ color:0xc46a2a, roughness:.7 }),
+  kaca:     () => new THREE.MeshPhysicalMaterial({ color:0x9fd8ff, transparent:true, opacity:.35, roughness:.08, transmission:.6, side:THREE.DoubleSide }),
+  kusen:    () => new THREE.MeshStandardMaterial({ color:0x62696f, roughness:.5, metalness:.4 }),
+  pintu:    () => new THREE.MeshStandardMaterial({ color:0x9a6f45, roughness:.6 }),
+  tanah:    () => new THREE.MeshStandardMaterial({ color:0x3b4a35, roughness:1 }),
+  paving:   () => new THREE.MeshStandardMaterial({ color:0x3a3f44, roughness:.95 }),
+  furnitur: () => new THREE.MeshStandardMaterial({ color:0x7a828b, roughness:.75 }),
+  kasur:    () => new THREE.MeshStandardMaterial({ color:0xc9d3dd, roughness:.8 }),
+  kayu:     () => new THREE.MeshStandardMaterial({ color:0x8b6b4a, roughness:.7 }),
+  bak:      () => new THREE.MeshStandardMaterial({ color:0xf2f5f7, roughness:.35 }),
+  atap2:    () => new THREE.MeshStandardMaterial({ color:0x8a4a3a, roughness:.8 }),
+  besi:     () => new THREE.LineBasicMaterial({ color:0xff8a3d, transparent:true, opacity:.95 }),
+  besi2:    () => new THREE.LineBasicMaterial({ color:0xffc93d, transparent:true, opacity:.9 })
+};
+
+const G = {};   // grup adegan (G.l2 dibuat belakangan untuk lantai 2)
+['site','struct','plat','dak','walls','rebar','rooms','furn','labels','dims','lv2'].forEach(k => {
+  G[k] = new THREE.Group(); scene.add(G[k]);
+});
+const PICK = [];
+const LBL = [];   // label ruang sebagai div HTML, diproyeksikan tiap frame
+
+function box(w,h,d,m,x,y,z,parent){
+  const b = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), m);
+  b.position.set(x,y,z);
+  b.castShadow = b.receiveShadow = true;
+  parent.add(b);
+  return b;
+}
+function wallSegment(p, h, t, holes, material){
+  const s = new THREE.Shape();
+  s.moveTo(0,0); s.lineTo(p,0); s.lineTo(p,h); s.lineTo(0,h); s.lineTo(0,0);
+  holes.forEach(o => {
+    const hw = o.w/2, x = o.s + hw, y0 = o.b, y1 = o.b + o.h;
+    s.holes.push(new THREE.Path([
+      new THREE.Vector2(x-hw,y0), new THREE.Vector2(x+hw,y0),
+      new THREE.Vector2(x+hw,y1), new THREE.Vector2(x-hw,y1)
+    ]));
+  });
+  const g = new THREE.ExtrudeGeometry(s, { depth:t, bevelEnabled:false });
+  g.translate(0, 0, -t/2);
+  const m = new THREE.Mesh(g, material);
+  m.castShadow = m.receiveShadow = true;
+  return m;
+}
+
+/* ---- struktur ----
+   Rumah 5,00 x 10,00. SISI DEPAN = z=0 (arah jalan). Grid as x 0 / 2,00 / 5,00 ; z 0 / 3,20 / 5,60 / 8,20 / 10,00
+   z 0..3,20     : ruang tamu (x 0..5,00)
+   z 3,20..5,60  : ruang keluarga + makan (x 0..5,00), tangga 1,20 x 1,40
+   z 5,60..8,20  : KM luar (0..1,80 | 5,60..7,20) + gudang (0..1,80 | 7,20..8,20)
+                   kamar orang tua (1,80..5,00 | 5,60..8,20) + KM dalam (3,40..5,00 | 6,60..8,20)
+   z 8,20..10,00 : dapur + kulkas + makan (x 0..5,00), akses dari gudang & kamar
+   Tangga        : bukaan 1,20 x 1,40 di x 1,60..2,80, z 3,60..5,00 (dalam ruang keluarga)
+*/
+function buildStructure(){
+  GRID_X.forEach(x => GRID_Y.forEach(y => {
+    box(1.00,.25,1.00, mat.beton(), x, M.dasarFootplat+.125, y, G.struct);
+    box(.25,.65,.25, mat.beton2(), x, -.925, y, G.struct);
+  }));
+  const hS = .30, yS = -.45;
+  GRID_Y.forEach(y => box(W,hS,.20, mat.beton(), W/2,yS,y, G.struct));
+  GRID_X.forEach(x => box(.20,hS,D, mat.beton(), x,yS,D/2, G.struct));
+  const hK = M.atasDak - M.bawahSloof;
+  GRID_X.forEach(x => GRID_Y.forEach(y => box(.20,hK,.20, mat.beton2(), x, M.bawahSloof+hK/2, y, G.struct)));
+  GRID_Y.forEach(y => box(W,.30,.15, mat.beton2(), W/2, M.bawahBalok+.15, y, G.struct));
+  GRID_X.forEach(x => box(.15,.30,D, mat.beton2(), x, M.bawahBalok+.15, D/2, G.struct));
+  // stek 50 cm
+  GRID_X.forEach(x => GRID_Y.forEach(y => box(.20,.50,.20, mat.stek(), x, M.atasDak+.25, y, G.struct)));
+  // plat dak 12 cm miring 1% ke belakang, berlubang di bukaan tangga
+  const tilt = Math.atan(0.01);
+  const dY = (z) => M.atasDak - M.tebalDak/2 - z*0.01 + 0.06;
+  // panel dibagi supaya lubang tangga (1,20 x 1,40) hanya ada di panel yang dilewati
+  [[0, 1.60, 0, D, false],
+   [1.60, 2.80, 0, 3.60, false],
+   [1.60, 2.80, 3.60, 5.00, true],
+   [1.60, 2.80, 5.00, D, false],
+   [2.80, W, 0, D, false]].forEach(([x0, x1, z0, z1, kosong]) => {
+    if (kosong) return;   // bagian ini dibuat terpisah sebagai bingkai 4 sisi
+    const geo = new THREE.BoxGeometry(x1-x0, M.tebalDak, z1-z0);
+    geo.rotateX(-tilt);
+    const m = new THREE.Mesh(geo, mat.beton());
+    m.position.set((x0+x1)/2, dY((z0+z1)/2), (z0+z1)/2);
+    m.castShadow = m.receiveShadow = true;
+    G.plat.add(m);
+    PICK.push({ mesh:m, info:{ t:'Plat dak 12 cm', d:'D10-150 dua lapis dua arah, beton K-250, kemiringan 1% ke belakang. Waterproofing dua lapis.' }});
+  });
+  // bingkai bukaan tangga 1,20 x 1,40 (dalam balok B2)
+  [[1.60,1.66,3.60,5.00],[2.74,2.80,3.60,5.00],[1.60,2.80,3.60,3.66],[1.60,2.80,4.94,5.00]].forEach(([x0,x1,z0,z1]) => {
+    // bingkai dibuat dari 4 potongan plat, jadi juga ikut G.plat
+    const geo = new THREE.BoxGeometry(x1-x0, M.tebalDak, z1-z0);
+    geo.rotateX(-tilt);
+    const m = new THREE.Mesh(geo, mat.beton());
+    m.position.set((x0+x1)/2, dY((z0+z1)/2), (z0+z1)/2);
+    m.castShadow = m.receiveShadow = true;
+    G.plat.add(m);
+  });
+  // B2 pengeliling bukaan tangga (0,90 x 2,60 di denah; di sini 1,20 x 1,40 agar muat di ruang)
+  const tx0 = 1.60, tx1 = 2.80, ty0 = 3.60, ty1 = 5.00, b2y = M.bawahBalok+.15;
+  box(tx1-tx0,.20,.12, mat.beton2(), (tx0+tx1)/2, b2y, ty0-.06, G.dak);
+  box(tx1-tx0,.20,.12, mat.beton2(), (tx0+tx1)/2, b2y, ty1+.06, G.dak);
+  box(.12,.20,ty1-ty0+.24, mat.beton2(), tx0-.06, b2y, (ty0+ty1)/2, G.dak);
+  box(.12,.20,ty1-ty0+.24, mat.beton2(), tx1+.06, b2y, (ty0+ty1)/2, G.dak);
+  const pts = [[1.60,3.60],[2.80,3.60],[2.80,5.00],[1.60,5.00],[1.60,3.60]]
+    .map(([x,z]) => new THREE.Vector3(x, M.atasDak+.02, z));
+  G.dak.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color:0x5ec8a0 })));
+}
+
+/* ---- dinding + bukaan ---- */
+function buildWalls(){
+  WALLS.forEach(w => {
+    const len = w.e - w.s;
+    const isKM = w.id === 'kmv' || w.id === 'kmh';
+    const material = isKM ? mat.km() : (w.luar ? mat.dinding() : mat.sekat());
+    const holes = w.bukaan.map(b => ({ ...b, s: b.s })).filter(b => b.s >= 0 && b.s + b.w <= len + 1e-6);
+    const m = wallSegment(len, M.tinggi, T, holes, material);
+    if (w.arah === 'h') m.position.set(w.s, 0, w.off);
+    else { m.rotation.y = -Math.PI/2; m.position.set(w.off, 0, w.s); }
+    G.walls.add(m);
+    PICK.push({ mesh:m, info:{ t:'Dinding bata ringan 10 cm', d:`${w.luar?'Dinding luar':'Dinding sekat'} pada as ${w.arah==='h'?'y':'x'} = ${w.off.toFixed(2)} m. 30-40 cm bawah memakai bata merah/batako agar tahan air. Plester + aci dua sisi.` }});
+
+    w.bukaan.forEach(b => {
+      const g = new THREE.Group();
+      if (b.jenis === 'pintu' || b.jenis === 'bukaan'){
+        if (b.jenis === 'pintu'){
+          // kusen: 2 tiang + ambang atas
+          const pw = .05;
+          const kiri = new THREE.Mesh(new THREE.BoxGeometry(pw, b.h, T+.02), mat.kusen());
+          kiri.position.set(-b.w/2+.02, b.h/2, 0);
+          const kanan = kiri.clone(); kanan.position.x = b.w/2-.02;
+          const atas = new THREE.Mesh(new THREE.BoxGeometry(b.w, pw, T+.02), mat.kusen());
+          atas.position.set(0, b.h-.02, 0);
+          // daun pintu terbuka 75 derajat ke arah dalam rumah
+          const pivot = new THREE.Group();
+          pivot.position.set(-b.w/2+.04, 0, 0);
+          const leaf = new THREE.Mesh(new THREE.BoxGeometry(b.w-.09, b.h-.06, .035), mat.pintu());
+          leaf.position.set((b.w-.09)/2, (b.h-.06)/2, 0);
+          const hd = new THREE.Mesh(new THREE.SphereGeometry(.028, 12, 12), mat.kusen());
+          hd.position.set(b.w-.16, 1.05, -.05);
+          pivot.add(leaf, hd);
+          pivot.rotation.y = (w.luar ? -1 : 1) * 1.31;   // ~75 derajat
+          g.add(kiri, kanan, atas, pivot);
+          PICK.push({ mesh:leaf, info:{ t: b.w < .75 ? 'Pintu KM 70 x 210 (PVC)' : b.w < .85 ? 'Pintu kamar 80 x 210' : 'Pintu utama 90 x 210', d:'Kusen + daun pintu. Digambar terbuka 75 derajat supaya ruang di belakangnya kelihatan.' }});
+        }
+      } else {
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, .06), mat.kusen());
+        frame.position.set(0, b.b + b.h/2, 0);
+        const glass = new THREE.Mesh(new THREE.BoxGeometry(b.w-.07, b.h-.07, .02), mat.kaca());
+        glass.position.set(0, b.b + b.h/2, .01);
+        g.add(frame, glass);
+        PICK.push({ mesh:glass, info: b.jenis === 'ventilasi'
+          ? { t:'Ventilasi KM 60 x 40', d:'Ambang 1,70 m, untuk membuang lembab kamar mandi.' }
+          : { t:`Jendela ${b.w.toFixed(2)} x ${b.h.toFixed(2)} m`, d:'Kaca 5 mm, ambang 90 cm. Total 7 unit di RAB.' }});
+      }
+      if (w.arah === 'h') g.position.set(b.s + b.w/2, 0, w.off);
+      else { g.rotation.y = -Math.PI/2; g.position.set(w.off, 0, b.s + b.w/2); }
+      G.walls.add(g);
+    });
+  });
+}
+
+/* ---- lantai + label ---- */
+function labelSprite(text){
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 160;
+  const p = c.getContext('2d');
+  const lines = text.split('\n');
+  p.fillStyle = 'rgba(10,14,18,.78)';
+  p.beginPath(); p.roundRect(4,4,504,152,26); p.fill();
+  p.strokeStyle = 'rgba(94,200,160,.55)'; p.lineWidth = 3; p.stroke();
+  p.textAlign = 'center';
+  p.fillStyle = '#e9f6f0'; p.font = '600 42px Segoe UI, sans-serif';
+  p.fillText(lines[0], 256, 74);
+  p.fillStyle = '#9fd9c2'; p.font = '400 32px Segoe UI, sans-serif';
+  p.fillText(lines[1] || '', 256, 124);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, depthTest:false, transparent:true }));
+  sp.scale.set(1.5, .47, 1);
+  return sp;
+}
+function buildRooms(){
+  ROOMS.forEach(r => {
+    const floor = new THREE.Mesh(
+      new THREE.BoxGeometry(r.x1-r.x0-T, .05, r.y1-r.y0-T),
+      new THREE.MeshStandardMaterial({ color:r.warna, roughness:.85 })
+    );
+    floor.position.set((r.x0+r.x1)/2, -.025, (r.y0+r.y1)/2);
+    floor.receiveShadow = true;
+    floor.userData.room = r;
+    G.rooms.add(floor);
+    PICK.push({ mesh:floor, info:{ room:r } });
+    const el = document.createElement('div');
+    el.className = 'rlabel';
+    el.innerHTML = `<b>${r.nama}</b><span>${r.luas} m²</span>`;
+    LBL.push({ el, p:new THREE.Vector3((r.x0+r.x1)/2, 2.2, (r.y0+r.y1)/2), id: r.id });
+    $('labels').appendChild(el);
+  });
+}
+
+/* ---- furnitur ---- */
+function buildFurniture(){
+  const put = (w,h,d,m,x,y,z) => {
+    m.clippingPlanes = null; m.clipShadows = false;   // furnitur tidak ikut terpotong cutaway
+    return box(w,h,d,m,x,y,z,G.furn);
+  };
+  // Ruang tamu (x 0..5,00 | z 0..3,20)
+  put(1.80,.45,.80, mat.furnitur(), 1.60,.225,2.70);     // sofa 3 dudukan
+  put(1.80,.55,.18, mat.furnitur(), 1.60,.75,3.04);
+  put(1.10,.40,.60, mat.kayu(), 1.60,.20,1.60);          // meja tamu
+  put(1.20,.45,.55, mat.furnitur(), 4.10,.225,2.65);     // sofa 2 dudukan
+  // Ruang keluarga + makan (x 0..5,00 | z 3,20..5,60), tangga 1,60..2,80 / 3,60..5,00
+  put(.75,.42,1.00, mat.kayu(), .55,.21,4.90);           // meja makan
+  put(1.40,2.0,.55, mat.kayu(), 4.10,1.0,3.60);          // lemari/TV di dinding sekat
+  // Kamar orang tua (1,80..5,00 | 5,60..8,20); KM dalam (3,20..5,00 | 6,60..8,20)
+  put(1.60,.40,2.00, mat.kasur(), 2.60,.20,7.10);        // kasur 160 x 200 + kaki utara
+  put(1.60,.25,.06, mat.kayu(), 2.60,.40,6.09);          // headboard di dinding z=5,60
+  put(.45,.55,.50, mat.kayu(), 1.20,.275,6.40);          // nakas dekat pintu
+  put(.55,2.0,1.20, mat.kayu(), 2.09,1.0,7.30);          // lemari di dinding x=1,80
+  // Dapur (0..5,00 | 8,20..10,00): deret di dinding belakang + kulkas di sudut
+  put(2.20,.85,.60, mat.beton2(), 1.90,.425,9.64);       // kompor + wastafel, punggung ke z=10,00
+  put(2.20,.60,.35, mat.beton2(), 1.90,1.15,9.77);       // kabinet atas
+  put(.65,1.70,.70, mat.furnitur(), 4.55,.85,9.55);      // kulkas 2 pintu
+  put(1.00,.75,.70, mat.kayu(), .90,.375,8.70);          // meja makan 2 orang
+  // KM luar (0..1,80 | 5,60..7,40) dan KM dalam (3,20..5,00 | 6,60..8,20)
+  put(.40,.40,.60, mat.bak(), .60,.20,7.00);
+  put(.40,.40,.60, mat.bak(), 4.60,.20,7.90);
+  // gudang (0..1,80 | 7,40..8,20): rak
+  put(1.40,.35,.35, mat.kayu(), .90,1.60,7.70);
+}
+
+/* ---- tulangan ---- */
+function rline(pts, m){
+  G.rebar.add(new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts.map(p => new THREE.Vector3(...p))), m));
+}
+function ring(cx,cy,cz,w,d,m){
+  const hw = w/2, hd = d/2;
+  rline([[cx-hw,cy,cz-hd],[cx+hw,cy,cz-hd],[cx+hw,cy,cz+hd],[cx-hw,cy,cz+hd],[cx-hw,cy,cz-hd]], m);
+}
+function buildRebar(){
+  const D12 = mat.besi(), D8 = mat.besi2(), D10 = mat.besi2();
+  GRID_X.forEach(x => GRID_Y.forEach(y => {
+    for (let i = -.45; i <= .451; i += .15){
+      rline([[x-.45,-1.44,y+i],[x+.45,-1.44,y+i]], D12);
+      rline([[x+i,-1.40,y-.45],[x+i,-1.40,y+.45]], D12);
+    }
+    [[-.075,-.075],[.075,-.075],[-.075,.075],[.075,.075]].forEach(([ox,oz]) =>
+      rline([[x+ox,-1.45,y+oz],[x+ox,-.60,y+oz]], D12));
+    for (let yy = -1.40; yy < -.62; yy += .10) ring(x,yy,y,.18,.18,D8);
+  }));
+  GRID_Y.forEach(y => {
+    [[-.05,-.11],[.05,-.11],[-.05,.11],[.05,.11]].forEach(([oz,oy]) =>
+      rline([[0,-.45+oy,y+oz],[W,-.45+oy,y+oz]], D12));
+    for (let x = .1; x < W; x += .15) ring(x,-.45,y,.14,.24,D8);
+  });
+  GRID_X.forEach(x => {
+    [[-.11,-.05],[-.11,.05],[.11,-.05],[.11,.05]].forEach(([oz,oy]) =>
+      rline([[x+oz,-.45+oy,0],[x+oz,-.45+oy,D]], D12));
+    for (let y = .1; y < D; y += .15) ring(x,-.45,y,.24,.14,D8);
+  });
+  GRID_X.forEach(x => GRID_Y.forEach(y => {
+    [[-.07,-.07],[0,-.07],[.07,-.07],[-.07,0],[.07,0],[-.07,.07],[0,.07],[.07,.07]].forEach(([ox,oz]) =>
+      rline([[x+ox,-.60,y+oz],[x+ox,M.stek,y+oz]], D12));
+    for (let yy = -.55; yy < M.atasDak; yy += .15) ring(x,yy,y,.15,.15,D8);
+  }));
+  const by = M.bawahBalok + .15;
+  GRID_Y.forEach(y => {
+    [-.14,0,.14].forEach(oz => {
+      rline([[0,by+.11,y+oz],[W,by+.11,y+oz]], D12);
+      rline([[0,by-.11,y+oz],[W,by-.11,y+oz]], D12);
+    });
+    for (let x = .1; x < W; x += .15) ring(x,by,y,.11,.25,D8);
+  });
+  GRID_X.forEach(x => {
+    [-.14,0,.14].forEach(oz => {
+      rline([[x+oz,by+.11,0],[x+oz,by+.11,D]], D12);
+      rline([[x+oz,by-.11,0],[x+oz,by-.11,D]], D12);
+    });
+    for (let y = .1; y < D; y += .15) ring(x,by,y,.25,.11,D8);
+  });
+  const yTop = M.atasDak-.02, yBot = M.atasDak-.10;
+  for (let x = .075; x < W; x += .15){
+    rline([[x,yBot,0],[x,yBot,D]], D10);
+    rline([[x,yTop,0],[x,yTop,D]], D10);
+  }
+  for (let z = .075; z < D; z += .15){
+    rline([[0,yBot+.005,z],[W,yBot+.005,z]], D10);
+    rline([[0,yTop-.005,z],[W,yTop-.005,z]], D10);
+  }
+}
+
+/* ---- site + dimensi ---- */
+function buildSite(){
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(60,60), mat.tanah);
+  ground.rotation.x = -Math.PI/2; ground.position.y = M.tanah;
+  ground.receiveShadow = true;
+  G.site.add(ground);
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(40,6), mat.paving);
+  road.rotation.x = -Math.PI/2; road.position.set(W/2, M.tanah+.005, -3.2);
+  G.site.add(road);
+  const lg = new THREE.BufferGeometry().setFromPoints(
+    [[-.4,-.4],[W+.4,-.4],[W+.4,D+.4],[-.4,D+.4],[-.4,-.4]].map(([x,z]) =>
+      new THREE.Vector3(x, .02, z)));
+  G.site.add(new THREE.Line(lg, new THREE.LineBasicMaterial({ color:0x5ec8a0, transparent:true, opacity:.5 })));
+  const sp = labelSprite('SISI DEPAN (arah jalan)\n5,00 m');
+  sp.position.set(W/2, .8, -2.4);
+  sp.scale.set(1.9,.6,1);
+  G.site.add(sp);
+}
+function dimLine(a, b, text){
+  G.dims.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([a,b]),
+    new THREE.LineBasicMaterial({ color:0x5ec8a0 })));
+  const sp = labelSprite(text + '\n');
+  sp.position.copy(a.clone().add(b).multiplyScalar(.5));
+  sp.scale.set(.95,.30,1);
+  G.dims.add(sp);
+}
+function buildDims(){
+  const y = .05, z = D+.9, x = W+.9;
+  dimLine(new THREE.Vector3(0,y,z), new THREE.Vector3(2,y,z), '2,00');
+  dimLine(new THREE.Vector3(2,y,z), new THREE.Vector3(W,y,z), '3,00');
+  dimLine(new THREE.Vector3(x,y,0),    new THREE.Vector3(x,y,3.20), '3,20');
+  dimLine(new THREE.Vector3(x,y,3.20), new THREE.Vector3(x,y,5.60), '2,40');
+  dimLine(new THREE.Vector3(x,y,5.60), new THREE.Vector3(x,y,D),    '4,40');
+  dimLine(new THREE.Vector3(0,y,z+.9), new THREE.Vector3(W,y,z+.9), '5,00 m');
+  dimLine(new THREE.Vector3(x+.9,y,0), new THREE.Vector3(x+.9,y,D), '10,00 m');
+}
+
+/* ---- lantai 2: dibangun bertahap, tiap bagian bisa disembunyikan ---- */
+let lv2Built = false;
+const L2 = { atas:1.32, dX0:0, dX1:W, dZ0:0, dZ1:D };   // atas dak = +3,15 (lantai 2 +0,00)
+function l2Group(){
+  if (!G.l2){
+    G.l2 = new THREE.Group();
+    scene.add(G.l2);
+  }
+  return G.l2;
+}
+function buildLevel2(){
+  if (lv2Built) return;
+  lv2Built = true;
+  const g = l2Group();
+  const base = L2.atas;
+  // material khusus lantai 2 TANPA clipping, supaya cutaway tidak melubangi bangunan atas
+  const mk = (color, rough=.92, extra={}) => new THREE.MeshStandardMaterial({ color, roughness:rough, ...extra });
+  const mWall = mk(0xe6e0d5, .93);
+  const mBeton = mk(0xa8a49c, .92);
+  const mBeton2 = mk(0x8f959a, .92);
+  const mAtap = mk(0x7d4a3c, .85);
+  const mTile = mk(0xb9a98f, .85);
+
+  // 1. ring balok lantai 2 (20/30) di atas dak
+  L2.ring = new THREE.Group(); g.add(L2.ring);
+  box(W,.30,.20, mBeton, W/2, base+.15, 0, L2.ring);
+  box(W,.30,.20, mBeton, W/2, base+.15, D, L2.ring);
+  box(.20,.30,D, mBeton, 0, base+.15, D/2, L2.ring);
+  box(.20,.30,D, mBeton, W, base+.15, D/2, L2.ring);
+
+  // 2. kolom lantai 2 (20/20) 3,0 m
+  L2.kolom = new THREE.Group(); g.add(L2.kolom);
+  GRID_X.forEach(x => GRID_Y.forEach(z =>
+    box(.20,3.0,.20, mBeton2, x, base+.60+1.5, z, L2.kolom)));
+
+  // 3. dinding lantai 2 (luar + 1 sekat) + jendela
+  L2.dinding = new THREE.Group(); g.add(L2.dinding);
+  const wallsL2 = [
+    { arah:'h', off:0, s:0, e:W, b:[{s:0.70,w:1.00,b:0.90,h:1.20},{s:3.30,w:1.00,b:0.90,h:1.20}] },
+    { arah:'h', off:D, s:0, e:W, b:[{s:1.90,w:1.10,b:0.90,h:1.20}] },
+    { arah:'v', off:0, s:0, e:D, b:[{s:1.20,w:1.00,b:0.90,h:1.20},{s:4.60,w:1.00,b:0.90,h:1.20}] },
+    { arah:'v', off:W, s:0, e:D, b:[{s:1.20,w:1.00,b:0.90,h:1.20},{s:4.60,w:1.00,b:0.90,h:1.20}] }
+  ];
+  wallsL2.forEach(w => {
+    const len = w.e - w.s;
+    const mesh = wallSegment(len, 2.9, T, w.b.map(o => ({...o})), mWall);
+    mesh.material.clippingPlanes = null; mesh.material.clipShadows = false;
+    if (w.arah === 'h') mesh.position.set(w.s, base+.60, w.off);
+    else { mesh.rotation.y = -Math.PI/2; mesh.position.set(w.off, base+.60, w.s); }
+    L2.dinding.add(mesh);
+    w.b.forEach(o => {
+      const grp = new THREE.Group();
+      const fr = new THREE.Mesh(new THREE.BoxGeometry(o.w, o.h, .06), mat.kusen());
+      const gl = new THREE.Mesh(new THREE.BoxGeometry(o.w-.07, o.h-.07, .02), mat.kaca());
+      fr.position.set(0, o.b + o.h/2, 0);
+      gl.position.set(0, o.b + o.h/2, .01);
+      grp.add(fr, gl);
+      if (w.arah === 'h') grp.position.set(w.s + o.s + o.w/2, base+.60, w.off);
+      else { grp.rotation.y = -Math.PI/2; grp.position.set(w.off, base+.60, w.s + o.s + o.w/2); }
+      L2.dinding.add(grp);
+    });
+  });
+  const sek = wallSegment(3.00, 2.9, T, [{ s:1.20, w:0.80, b:0, h:2.10, jenis:'pintu' }], mWall);
+  sek.material.clippingPlanes = null; sek.material.clipShadows = false;
+  sek.rotation.y = -Math.PI/2; sek.position.set(2.60, base+.60, 8.20);
+  L2.dinding.add(sek);
+
+  // 4. tangga beton 16 anak tangga menuju bukaan 1,20 x 1,40
+  L2.tangga = new THREE.Group(); g.add(L2.tangga);
+  const n = 16, rise = 3.15 / n, run = 0.25;
+  for (let k = 0; k < n; k++)
+    box(0.90, rise, run, mBeton, 2.05, k*rise + rise/2, 4.95 - k*run - run/2, L2.tangga);
+
+  // 5. atap baja ringan + lisplang
+  L2.atap = new THREE.Group(); g.add(L2.atap);
+  box(W+.9, .14, D+.9, mAtap, W/2, base+.60+2.95, D/2, L2.atap);
+  box(W+.9, .22, .06, mat.kusen(), W/2, base+.60+2.84, -.45, L2.atap);
+  box(W+.9, .22, .06, mat.kusen(), W/2, base+.60+2.84, D+.45, L2.atap);
+
+  // 6. lantai 2 (keramik di atas dak lama)
+  L2.lantai = new THREE.Group(); g.add(L2.lantai);
+  const fl = new THREE.Mesh(new THREE.BoxGeometry(W-.4, .05, D-.4), mTile);
+  fl.position.set(W/2, base+.03, D/2);
+  fl.receiveShadow = true;
+  L2.lantai.add(fl);
+}
+
+/* tampilkan lantai 2 sesuai progres */
+function applyLevel2(p){
+  if (p <= 100){ if (G.l2) G.l2.visible = false; return; }
+  buildLevel2();
+  const g = l2Group();
+  g.visible = true;
+  const q = (p - 100) / 100;                       // 0..1 pada tahap lantai 2
+  L2.ring.visible   = q > 0.03;
+  L2.kolom.visible  = q > 0.08;
+  L2.dinding.visible= q > 0.18;
+  L2.tangga.visible = q > 0.26;
+  L2.atap.visible   = q > 0.36;
+  L2.lantai.visible = q > 0.50;
+  // tangga tumbuh berdikit: makin tinggi progres makin banyak anak tangga?
+}
+
+/* ============ 5. UI ============ */
+const $ = id => document.getElementById(id);
+let hlMeshes = [], hlRoom = null;
+
+function renderRAB(){
+  const h = hitungRAB();
+  $('cTotal').textContent = rp(h.total);
+  $('cCad').textContent = rp(h.cad);
+  const p1 = BASE.tahap1;   // sudah pecahan (0,57), bukan rupiah
+  $('cS1').textContent = rp(h.sub * p1 * 1.1);
+  $('cS2').textContent = rp(h.sub * (1-p1) * 1.1);
+  $('finNote').textContent =
+    (FIN === 0 ? 'Dasar: keramik, kusen standar. ' : FIN === 1 ? 'Granit +Rp 15 juta. ' : 'Granit + kusen pilihan +Rp 20 juta. ') +
+    'Harga satuan = pasar Oktober 2026 (Kediri/Jawa Timur). Ongkos kirim material curah belum masuk - siapkan 5% ekstra.';
+
+  let html = '';
+  RAB.forEach(g => {
+    html += `<tr class="grp"><td colspan="4">${g.grp}</td></tr>`;
+    g.items.forEach(it => {
+      const [nama, vol, sat, rate, jenis] = it;
+      const m = (g.upah ? MULT.upah : (MULT[jenis] ?? 1));
+      html += `<tr data-part="${it[5]||''}">
+        <td>${nama}</td>
+        <td class="n">${nf.format(vol).replace('.',',')} ${sat}</td>
+        <td class="n">${nf.format(rate*m)}</td>
+        <td class="n">${nf.format(vol*rate*m)}</td></tr>`;
+    });
+  });
+  html += `<tr class="grp"><td colspan="4">FINISHING (${['keramik','granit','granit + kusen'][FIN]})</td></tr>
+    <tr><td>Tambahan finishing (masuk di baris bahan)</td><td class="n">-</td><td class="n">-</td><td class="n">${FIN ? '+' + nf.format(h.finM) : '0'}</td></tr>`;
+  if (ATAP === 'baja')
+    html += `<tr><td>Penghematan atap baja ringan</td><td class="n">-</td><td class="n">-</td>
+      <td class="n" style="color:#e06c75">-${nf.format(DAK_SAVE)}</td></tr>`;;
+  html += `<tr class="grp"><td colspan="4">REKAP</td></tr>
+    <tr><td>Bahan</td><td class="n"></td><td class="n"></td><td class="n">${nf.format(h.bahan)}</td></tr>
+    <tr><td>Upah</td><td class="n"></td><td class="n"></td><td class="n">${nf.format(h.upah)}</td></tr>
+    <tr><td><b>Subtotal</b></td><td class="n"></td><td class="n"></td><td class="n"><b>${nf.format(h.sub)}</b></td></tr>
+    <tr><td>Cadangan 10%</td><td class="n"></td><td class="n"></td><td class="n">${nf.format(h.cad)}</td></tr>
+    <tr><td><b>Total</b></td><td class="n"></td><td class="n"></td><td class="n"><b>${nf.format(h.total)}</b></td></tr>
+    <tr><td><b>Per m2 (50 m2)</b></td><td class="n"></td><td class="n"></td><td class="n"><b>${nf.format(h.perM2)}</b></td></tr>`;
+  $('rab').innerHTML = html;
+  $('cSub').textContent = rp(h.sub);
+  $('cPer').textContent = rp(h.perM2) + ' / m²';
+  if (typeof renderProg === 'function') renderProg();
+}
+
+/* ============ 5b. PROGRES 1-100% (tahapan hal. 8) ============ */
+/* bobot = porsi biaya; bahan = daftar "bahan apa" saat tahap itu (dari hal. 6-8) */
+/* Perkiraan biaya lanjutan lantai 2 (50 m2 di atas dak): struktur ringan + tangga +
+   atap baja ringan + finishing dasar. BUKAN dari PDF - asumsi saya, ditandai di UI.
+   Rentang wajar Kediri-Blitar: +/- 20%. */
+const L2_TOTAL = 235000000;
+
+const STAGES = [
+  { n:'Persiapan', bobot:0.010, hari:5,
+    bahan:['Bowplank, papan & patok ukur','Patok as 2,0 / 3,0 dan 3,6 / 3,4 m','Semen (untuk titik ukur)','Alat ukur, waterpass'],
+    cat:'Uji tanah/sondir dulu. Jangan mulai galian sebelum hasil tanah jelas.' },
+  { n:'Pondasi', bobot:0.120, hari:14,
+    bahan:['Besi D12 (footplat, pedestal)','Besi D8 untuk sengkang','Semen K-250 / 50 kg','Pasir + kerikil','Batu belah / pasir lantai kerja'],
+    cat:'Footplat 100x100x25 di 9 titik, dasar ±1,2 m di tanah keras. Pedestal 25/25 dengan 8 D12.' },
+  { n:'Sloof + urugan', bobot:0.095, hari:12,
+    bahan:['Besi D12 (sloof 4 batang)','Besi D8 sengkang','Bekisting kayu sloof','Semen, pasir, kerikil','Tanah urug + pasir padat'],
+    cat:'Sloof 20/30 mengikat semua kolom. Pasang stek besi kolom SEBELUM cor.' },
+  { n:'Kolom dan dinding', bobot:0.190, hari:21,
+    bahan:['Besi D12 kolom (8 per kolom)','Besi D8 sengkang','Bata ringan 10 cm','Perekat MU-380','Bata merah/batako 30-40 cm bawah','Bekisting kolom'],
+    cat:'Dinding 30-40 cm bawah pakai bata merah/batako agar tahan air.' },
+  { n:'Balok dan dak', bobot:0.250, hari:21,
+    bahan:['Beton ready mix K-250 (4,8 m3)','Besi D12 balok 3 atas + 3 bawah','Besi D10 plat dak 2 lapis','Sengkang D8-150','Bekisting dak + steger sewa','Kawat bendrat'],
+    cat:'Cor dak satu hari, rawat 7 hari, bekisting bongkar ≥21 hari. Foto tulangan sebelum cor.' },
+  { n:'Waterproofing dak', bobot:0.060, hari:7,
+    bahan:['Membran/coating waterproofing 2 lapis','Screed kemiringan 1%','Pipa PVC 3 inci + talang','Beton decking'],
+    cat:'Tes genangan 48 jam sebelum lanjut finishing. Bocor lebih mahal diperbaiki.' },
+  { n:'Finishing', bobot:0.230, hari:30,
+    bahan:['Pintu (utama/kamar/KM)','Jendela aluminium + kaca 5 mm','Ventilasi KM','Keramik/granit','Semen + pasir plester & aci','Cat','Kabel listrik + saklar','Pipa PVC/PPR + septic tank'],
+    cat:'Pipa listrik & plumbing dipasang sebelum plester dan keramik.' },
+  { n:'Serah terima', bobot:0.045, hari:5,
+    bahan:['Alat cek kebocoran','Cat touch-up','Kunci + aksesori','Dokumentasi foto tulangan'],
+    cat:'Cek bocor, listrik, saluran, retak rambut. Simpan gambar & foto untuk arsip lantai 2.' },
+  /* ---- lanjutan: lantai 2 (110-200%) ---- */
+  { n:'Persiapan lantai 2', lv2:true, bobot:0.010, hari:4,
+    bahan:['Bongkar waterproofing lama di area tangga','Alat ukur + waterpass','Perancah & scafolding','Stang/penutup sementara'],
+    cat:'Konsultasi ahli struktur dulu: dak lama diuji ulang untuk beban lantai 2 (beban hidup + dinding atas).' },
+  { n:'Bukaan tangga + stek', lv2:true, bobot:0.020, hari:8,
+    bahan:['Pemotong beton / core drill','Besi D12 stek sambungan kolom','Besi D10 tulangan tangga','Semen K-250 + curing'],
+    cat:'Buka lubang hanya di dalam bingkai balok B2 (1,20 x 1,40). Cangkul stek besi kolom yang menjulang 50 cm.' },
+  { n:'Kolom + ring balok lantai 2', lv2:true, bobot:0.025, hari:10,
+    bahan:['Besi D12 kolom 8 batang','Besi D8 sengkang','Bekisting kolom','Semen, pasir, kerikil'],
+    cat:'Sambungan besi jangan di satu titik. Kolom lantai 2 berhenti di ring balok.' },
+  { n:'Dinding lantai 2', lv2:true, bobot:0.030, hari:12,
+    bahan:['Bata ringan 10 cm','Perekat MU-380','Bata red/batako 30-40 cm bawah','Konduit listrik'],
+    cat:'Dinding atas memakai bata ringan agar beban dak tetap kecil.' },
+  { n:'Tangga beton', lv2:true, bobot:0.020, hari:10,
+    bahan:['Besi D10 tulangan tangga','Bekisting tangga + perancah','Keramik atau granit anak tangga','Railing besi / kayu'],
+    cat:'Tangga di posisi bukaan yang sudah disiapkan. Tinggi anak tangga ±18 cm.' },
+  { n:'Atap lantai 2', lv2:true, bobot:0.030, hari:10,
+    bahan:['Rangka baja ringan C75','Atap metal/genteng ringan','Screw + aksesori','Lisplang'],
+    cat:'Atap ringan (baja ringan) supaya beban dak tidak bertambah besar.' },
+  { n:'Finishing lantai 2', lv2:true, bobot:0.035, hari:20,
+    bahan:['Plester + aci','Keramik/granit','Pintu kamar 80/210 (2)','Jendela aluminium + kaca 5 mm','Cat','Instalasi listrik + saklar','Pipa air bersih & kotor'],
+    cat:'Pasang pipa sebelum plester. Skema listrik dibuat menyalur dari panel lantai 1.' }
+];
+/* 0-100% = tahap lantai 1 (bobot 1.0) . 100-200% = lantai 2 (bobot 1.0)
+   biaya lantai 2 = L2_TOTAL (perkiraan sendiri, ditandai jelas di panel) */
+
+let rebarOn = false;
+let fullSnap = null;
+
+function renderProg(){
+  const p = +$('prog').value;
+  $('vProg').textContent = p + '%';
+  $('progBar').style.width = (p / 2) + '%';
+  document.querySelectorAll('#progJump .chip').forEach(c =>
+    c.classList.toggle('on', +c.dataset.p === p));
+
+  const h = hitungRAB();
+  const biayaL1 = h.total;
+  const biayaL2 = L2_TOTAL;
+  const totalBiaya = biayaL1 + biayaL2;
+
+  const hariL1 = STAGES.filter(x => !x.lv2).reduce((a,x)=>a+x.hari, 0);
+  const hariL2 = STAGES.filter(x =>  x.lv2).reduce((a,x)=>a+x.hari, 0);
+
+  let acc = 0;
+  const rows = STAGES.map(s => {
+    const mulai = acc, akhir = acc + s.bobot;
+    const dalam = Math.min(Math.max((p/100 - mulai) / s.bobot, 0), 1);
+    acc = akhir;
+    return { s, mulai, akhir, dalam };
+  });
+
+  // porsi biaya: lantai 1 0-100%, lantai 2 100-200%
+  const pL1 = Math.min(p, 100) / 100;
+  const pL2 = Math.max(0, p - 100) / 100;
+  const biaya = biayaL1 * pL1 + biayaL2 * pL2;
+
+  const aktif = rows.find(r => r.dalam > 0 && r.dalam < 1) ||
+                rows.filter(r => r.dalam >= 1).pop() || rows[0];
+
+  $('pCost').textContent = rp(biaya);
+  $('pRest').textContent = rp(totalBiaya - biaya);
+
+  const hari = p <= 100
+    ? Math.round(p / 100 * hariL1)
+    : Math.round(hariL1 + (p - 100) / 100 * hariL2);
+  $('pTime').textContent = '±' + hari + ' hari (±' + Math.max(1, Math.round(hari/7)) + ' minggu)';
+  $('pNow').textContent = aktif.s.n + (p > 100 ? ' (lantai 2)' : '');
+
+  $('stages').innerHTML = rows.map((r,i) => {
+    const cls = r.dalam >= 1 ? 'done' : (r.dalam > 0 ? 'now' : '');
+    const pct = Math.round(r.dalam * 100);
+    const hr = Math.round(r.s.hari * r.dalam);
+    const label = (r.dalam > 0 && r.dalam < 1) ? `${pct}% &middot; ${hr}/${r.s.hari}hr` : pct + '%';
+    const split = (i && rows[i-1].s.lv2 !== r.s.lv2)
+      ? '<div class="stageHead">Lantai 2 — tahap lanjutan</div>' : '';
+    return split + `<div class="stage ${cls}" data-i="${i}">
+      <span class="dot"></span><span class="nm">${r.s.n}</span>
+      <span class="bar"><i style="width:${pct}%"></i></span>
+      <span class="pct">${label}</span></div>`;
+  }).join('');
+
+  const biayaTahap = rp((p <= 100 ? biayaL1 : biayaL2) * (p <= 100 ? pL1 : pL2));
+  $('pNote').innerHTML =
+    `<b style="color:#c9f5e2">${aktif.s.n}</b> &middot; ±${biayaTahap} untuk tahap ini` +
+    `<div class="note" style="margin-top:3px">${aktif.s.cat}</div>` +
+    `<div class="note" style="margin-top:5px;color:#9fd9c2">Bahan di tahap ini:</div>` +
+    `<ul class="matList">${aktif.s.bahan.map(b => `<li>${b}</li>`).join('')}</ul>` +
+    (p > 100 ? `<div class="note" style="margin-top:6px;color:var(--warn)">
+      Angka lantai 2: ${rp(biayaL2)} adalah perkiraan kasar saya (bukan dari PDF).
+      Dak jadi lantai 2 hanya boleh setelah ahli struktur menghitung ulang beban.</div>` : '');
+
+  // label kamar/KM disembunyikan supaya tidak menutupi model; ruang keluarga selalu tampil
+  LBL.forEach(o => o.el.classList.toggle('off', p > 100));
+  // plat lantai 2 menutup jendela lantai 1? tidak: tapi label & highlight dimatikan
+
+  applyProgressVisual(p);
+  showInfo('Progres ' + p + '%', `${aktif.s.n}: ±${rp(biaya)} terpakai, sisa ±${rp(totalBiaya - biaya)}.`);
+}
+
+/* 3D tumbuh mengikuti progres (0-200%) */
+function applyProgressVisual(p){
+  const lvl = p <= 0 ? 0 : p < 13 ? 1 : p < 22 ? 2 : p < 44 ? 3 : p < 65 ? 4 : 5;
+  G.walls.visible = lvl >= 3 && !rebarOn;
+  G.plat.visible  = lvl >= 4 && !rebarOn && p <= 100;
+  G.dak.visible   = lvl >= 4 && !rebarOn && p <= 100;
+  G.furn.visible  = lvl >= 5;
+  G.struct.children.forEach(m => {
+    if (!m.isMesh) return;
+    const y = m.position.y;
+    if (y > M.bawahBalok - .05)      m.visible = lvl >= 4;   // balok dak + stek
+    else if (y > M.bawahSloof + .01) m.visible = lvl >= 3;   // kolom
+    else if (y > -.60)               m.visible = lvl >= 2;   // sloof
+    else                             m.visible = lvl >= 1;   // footplat + pedestal
+  });
+  applyLevel2(p);
+}
+
+function clearHL(){
+  hlMeshes.forEach(m => {
+    m.material.emissive.setHex(m.userData._em ?? 0x000000);
+    m.material.emissiveIntensity = m.userData._ei ?? 1;
+  });
+  hlMeshes = [];
+}
+function tint(mesh, color){
+  const fresh = mesh.material.clone();
+  fresh.emissive = new THREE.Color(color);
+  fresh.emissiveIntensity = 1.2;
+  mesh.material = fresh;
+  hlMeshes.push(mesh);
+}
+function highlightPart(part){
+  clearHL();
+  if (!part) return;
+  const targets = {
+    struktur: G.struct, dak: [...G.struct.children, ...G.dak.children], dinding: G.walls,
+    lantai: G.rooms, bukaan: G.walls, rebar: G.rebar
+  }[part];
+  if (!targets) return;
+  if (Array.isArray(targets)) targets.forEach(o => { if (o.isMesh) tint(o, 0x1f7a5a); });
+  else targets.traverse(o => { if (o.isMesh) tint(o, 0x1f7a5a); });
+}
+
+function showInfo(title, desc, inline){
+  $('info').innerHTML = `<b>${title}</b>${desc || ''}`;
+}
+function showRoom(r){
+  clearHL();
+  const m = G.rooms.children.find(o => o.userData.room === r);
+  if (m) tint(m, 0x2a6b52);
+  $('info').innerHTML = `<b>${r.nama}</b>Luas <b class="ins">${r.luas} m²</b><br>${NOTE[r.id]}`;
+}
+
+/* ============ 6. BUILD ============ */
+buildSite();
+buildStructure();
+buildWalls();
+buildRooms();
+buildFurniture();
+buildDims();
+buildRebar();
+G.rebar.visible = false;
+G.dims.visible = false;
+
+$('luasNote').textContent =
+  `Luas per ruang dijumlah ${ROOMS.reduce((a,r)=>a+r.luas,0).toFixed(1)} m². Denah 5 x 8 m = 40 m²; ` +
+  'selisih karena tebal dinding 10 cm dan sekat-sekatnya.';
+
+/* ============ 7. INTERAKSI ============ */
+const clock = new THREE.Clock();   // shortcut: Clock deprecated di r186, masih jalan; ganti ke THREE.Timer saat upgrade r190+
+const keys = Object.create(null);
+let fps = false;
+const fpsCtl = new PointerLockControls(camera, document.body);
+scene.add(fpsCtl.object);
+const vel = new THREE.Vector3();
+
+$('btnFps').onclick = () => { if (!fps) fpsCtl.lock(); else fpsCtl.unlock(); };
+fpsCtl.addEventListener('lock', () => {
+  fps = true; orbit.enabled = false;
+  $('crosshair').style.display = 'block';
+  $('fpsbar').style.display = 'block';
+  $('btnFps').classList.add('on');
+  camera.position.set(W/2, 1.6, 6.3);
+  camera.lookAt(W/2, 1.5, 0);
+});
+fpsCtl.addEventListener('unlock', () => {
+  fps = false; orbit.enabled = true;
+  $('crosshair').style.display = 'none';
+  $('fpsbar').style.display = 'none';
+  $('btnFps').classList.remove('on');
+  orbit.target.set(W/2, 1.4, D/2);
+  orbit.update();
+});
+document.addEventListener('keydown', e => { keys[e.code] = true; });
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+const VIEWS = {
+  iso:   { p:[-8.5,9.5,12.5], t:[W/2,1.2,D/2] },
+  front: { p:[W/2,2.2,-8],   t:[W/2,1.6,D/2] },
+  top:   { p:[W/2,16,D/2+.01], t:[W/2,0,D/2] },
+  wide:  { p:[15,12,18],     t:[W/2,1,D/2] }
+};
+document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => {
+  if (fps) fpsCtl.unlock();
+  const v = VIEWS[b.dataset.view];
+  camera.position.set(...v.p);
+  orbit.target.set(...v.t);
+  orbit.update();
+});
+$('btnSolo').onclick = () => {
+  if (fps) fpsCtl.unlock();
+  camera.position.set(W/2, 1.65, 6.3);
+  orbit.target.set(1.6, 1.2, 4.2);
+  $('labels').classList.add('close');
+  $('cut').value = 330; setCut(330);
+  orbit.update();
+};
+
+function setCut(cm){
+  cutPlane.constant = cm / 100;
+  $('vCut').textContent = cm >= 330 ? 'penuh' : (cm/100).toFixed(2) + ' m';
+}
+$('cut').oninput = e => setCut(+e.target.value);
+$('lv2').oninput = e => {
+  const v = +e.target.value;
+  $('vLv2').textContent = v + '%';
+  $('prog').value = 100 + v;
+  renderProg();
+};
+$('sun').oninput = e => {
+  const hr = +e.target.value, a = (hr-6)/12*Math.PI, s = Math.max(Math.sin(a), .05);
+  sun.position.set(W/2 + Math.cos(a)*16, 4 + s*14, D/2 + s*6);
+  sun.intensity = 1.0 + s*1.8;
+  sun.color.setHSL(.09, .45, .5 + s*.28);
+  $('vSun').textContent = String(hr).padStart(2,'0') + ':00';
+};
+$('sun').dispatchEvent(new Event('input'));
+
+let xrayOn = false, labelsOn = true, dimsOn = false;
+$('btnRebar').onclick = e => {
+  rebarOn = !rebarOn;
+  e.target.classList.toggle('on', rebarOn);
+  G.rebar.visible = rebarOn && ATAP === 'dak';
+  G.walls.visible = !rebarOn;
+  G.dak.visible = !rebarOn;
+  G.plat.visible = !rebarOn;
+  if (G.l2) G.l2.visible = lv2Built && !rebarOn && +$('prog').value > 100;
+  showInfo(rebarOn ? 'Bongkar beton' : 'Beton utuh',
+    rebarOn
+      ? 'Hanya tulangan: kolom 8 D12 + sengkang D8-150 (D8-100 di ujung), balok dak 3+3 D12, plat D10-150 dua lapis dua arah, footplat D12-150, sloof 4 D12. Foto semua tulangan sebelum dicor.'
+      : 'Dinding, plat dak, dan lantai 2 (jika ada) ditampilkan lagi.');
+};
+$('btnXray').onclick = e => {
+  xrayOn = !xrayOn;
+  e.target.classList.toggle('on', xrayOn);
+  G.walls.traverse(o => {
+    if (!o.isMesh) return;
+    if (!o.userData._m) o.userData._m = o.material;
+    if (xrayOn){
+      const c = o.material.clone();
+      c.transparent = true; c.opacity = .22; c.depthWrite = false;
+      o.material = c;
+    } else if (o.userData._m){
+      o.material = o.userData._m;
+    }
+  });
+};
+$('btnLabels').onclick = e => {
+  labelsOn = !labelsOn;
+  e.target.classList.toggle('on', labelsOn);
+  updateLabels();
+};
+$('btnDims').onclick = e => {
+  dimsOn = !dimsOn;
+  e.target.classList.toggle('on', dimsOn);
+  G.dims.visible = dimsOn;
+};
+
+[['mBesi','vBesi','besi'],['mSemen','vSemen','semen'],['mUmum','vUmum','umum'],['mUpah','vUpah','upah']]
+.forEach(([sid,vid,key]) => {
+  const el = $(sid);
+  el.oninput = () => {
+    MULT[key] = +el.value / 100;
+    $(vid).textContent = MULT[key].toFixed(2) + 'x';
+    renderRAB();
+  };
+});
+document.querySelectorAll('#chipsFin .chip').forEach(c => c.onclick = () => {
+  document.querySelectorAll('#chipsFin .chip').forEach(x => x.classList.remove('on'));
+  c.classList.add('on');
+  FIN = +c.dataset.fin;
+  renderRAB();
+});
+document.querySelectorAll('#chipsAtap .chip').forEach(c => c.onclick = () => {
+  document.querySelectorAll('#chipsAtap .chip').forEach(x => x.classList.remove('on'));
+  c.classList.add('on');
+  ATAP = c.dataset.atap;
+  renderRAB();
+  const baja = ATAP === 'baja';
+  G.dak.visible = !baja && !rebarOn;
+  G.plat.visible = !baja && !rebarOn;
+  G.struct.children.forEach(m => {
+    if (m.isMesh && m.position.y > M.bawahBalok - .05) m.visible = !baja;
+  });
+  if (baja){
+    if (G.l2) G.l2.visible = false;
+    $('lv2').value = 0;
+    $('vLv2').textContent = '0%';
+    showInfo('Atap baja ringan', 'Dak beton, balok dak, dan stek kolom hilang dari model. Selisih ±Rp 35 juta terhadap dak siap lantai 2 (dokumen menyebut 30-40 juta).');
+  } else {
+    G.rebar.visible = rebarOn;
+    showInfo('Dak beton', 'Struktur dak kembali tampil: dak ini calon lantai 2.');
+  }
+});
+
+const ray = new THREE.Raycaster(), pt = new THREE.Vector2();
+let downX = 0, downY = 0;
+canvas.addEventListener('pointerdown', e => { downX = e.clientX; downY = e.clientY; });
+canvas.addEventListener('pointerup', e => {
+  if (fps || Math.hypot(e.clientX-downX, e.clientY-downY) > 5) return;
+  const r = canvas.getBoundingClientRect();
+  pt.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  pt.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  ray.setFromCamera(pt, camera);
+  const targets = [];
+  [G.rooms, G.walls, G.struct, G.dak].forEach(g => g.traverse(o => { if (o.isMesh && o.visible) targets.push(o); }));
+  const hit = ray.intersectObjects(targets, false)[0];
+  if (!hit) return;
+  const rec = PICK.find(p => p.mesh === hit.object);
+  if (!rec) return;
+  if (rec.info.room) showRoom(rec.info.room);
+  else showInfo(rec.info.t, rec.info.d);
+});
+$('rab').addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-part]');
+  if (!tr) return;
+  document.querySelectorAll('#rab tr.hl').forEach(x => x.classList.remove('hl'));
+  tr.classList.add('hl');
+  highlightPart(tr.dataset.part);
+  showInfo(tr.children[0].textContent, 'Bagian ini tersorot hijau di model 3D.');
+});
+
+/* ============ 8. LOOP ============ */
+function updateLabels(){
+  const w = canvas.clientWidth, h = canvas.clientHeight, v = new THREE.Vector3();
+  const shown = [];
+  LBL.forEach(o => {
+    v.copy(o.p).project(camera);
+    let vis = labelsOn && v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05;
+    const x = (v.x + 1) / 2 * w, y = (-v.y + 1) / 2 * h;
+    if (vis && shown.some(s => Math.abs(s.x - x) < 95 && Math.abs(s.y - y) < 34)) vis = false;
+    if (vis) shown.push({ x, y });
+    o.el.style.display = vis ? 'block' : 'none';
+    if (!vis) return;
+    o.el.style.left = x + 'px';
+    o.el.style.top  = y + 'px';
+  });
+}
+
+function onResize(){
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  const pr = renderer.getPixelRatio();
+  if (canvas.width !== Math.floor(w*pr) || canvas.height !== Math.floor(h*pr)){
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}
+function tick(){
+  const dt = Math.min(clock.getDelta(), .05);
+  onResize();
+  if (fps){
+    const speed = (keys.ShiftLeft || keys.ShiftRight) ? 4.2 : 2.0;
+    const fwd  = (keys.KeyW || keys.ArrowUp    ? 1:0) - (keys.KeyS || keys.ArrowDown  ? 1:0);
+    const side = (keys.KeyD || keys.ArrowRight ? 1:0) - (keys.KeyA || keys.ArrowLeft  ? 1:0);
+    const up   = (keys.KeyE ? 1:0) - (keys.KeyQ ? 1:0);
+    vel.set(side, up, -fwd).normalize().multiplyScalar(speed * dt);
+    if (fwd || side){ fpsCtl.moveForward(vel.z); fpsCtl.moveRight(vel.x); }
+    camera.position.y += vel.y;
+  } else {
+    orbit.update();
+  }
+  updateLabels();
+  renderer.render(scene, camera);
+}
+renderer.setAnimationLoop(tick);
+
+/* ============ 9. SELF-CHECK ============ */
+function selfCheck(){
+  const near = (a,b,tol=1) => Math.abs(a-b) <= tol;
+  const eq = (a,b) => Math.abs(a-b) < 1e-9;
+  const errs = [];
+  const area = r => (r.x1-r.x0)*(r.y1-r.y0);
+  const R = id => ROOMS.find(r => r.id === id);
+
+  // ---- struktur ----
+  const foot = GRID_X.length * GRID_Y.length;          // 3 x 5 = 15
+  if (foot !== 15) errs.push('footplat ' + foot);
+  const sloof = 2*W + 2*D;                            // 2 x (5,00 + 10,00) = 30 m
+  if (!near(sloof, 30, 1e-6)) errs.push('sloof ' + sloof);
+  if (!near(W*D, 50, 1e-9)) errs.push('luas bangunan ' + W*D);
+
+  // ---- RAB ----
+  const h = hitungRAB();
+  if (!near(h.total, h.sub * 1.1, 2)) errs.push('total ' + h.total);
+  if (!near(h.perM2, h.total / 50, 1)) errs.push('perM2 ' + h.perM2);
+  if (!near(h.cad / h.sub, 0.10, 1e-6)) errs.push('cadangan bukan 10%');
+  if (document.getElementById('cTotal').textContent !== rp(h.total)) errs.push('total panel beda');
+  // jendela di RAB tidak boleh kurang dari yang digambar
+  const nJendela = WALLS.reduce((a,w) => a + w.bukaan.filter(b => b.jenis === 'jendela').length, 0);
+  const jr = RAB.flatMap(g => g.items).find(it => it[0].startsWith('Jendela'));
+  if (jr[1] < nJendela) errs.push(`jendela RAB ${jr[1]} < digambar ${nJendela}`);
+
+  // ---- tata letak ----
+  const tamu = R('tamu'), rug = R('rug'), kml = R('kml'), gud = R('gudang');
+  const tidur = R('tidur'), kmd = R('kmd'), dap = R('dap');
+  // versi dirapikan supaya tidak ada desimal 5,599999 di pembanding
+  tamu.y0 = 0;    tamu.y1 = 3.20;
+  rug.y0  = 3.20; rug.y1  = 5.60;
+  kml.y0  = 5.60; kml.y1  = 7.20;
+  gud.y0  = 7.20; gud.y1  = 8.20;
+  tidur.y0 = 5.60;
+  dap.y0  = 8.20; dap.y1  = 10.00;
+  const px = x => +x.toFixed(3);   // toleransi desimal 1 mm
+  const same = (a,b) => Math.abs(a-b) < 1e-3;
+  if (!same(tamu.y0, 0)) errs.push('ruang tamu bukan di depan');
+  if (!same(dap.y1, D)) errs.push('dapur bukan di belakang');
+  if (!same(tamu.y1, rug.y0)) errs.push('tamu & keluarga tidak bersambung');
+  if (!same(rug.y1, kml.y0)) errs.push('keluarga tidak bersambung ke KM luar');
+  if (!same(kml.x1, tidur.x0)) errs.push('KM luar tidak menempel kamar');
+  if (!same(gud.x0, kml.x0) || !same(gud.y0, kml.y1)) errs.push('gudang tidak menempel KM luar');
+  if (!same(dap.y0, gud.y1)) errs.push('dapur tidak menempel gudang');
+  if (!(kmd.x0 > tidur.x0 && kmd.x1 <= tidur.x1 && kmd.y0 > tidur.y0 && kmd.y1 <= tidur.y1))
+    errs.push('KM dalam tidak di dalam kamar');
+
+  // ---- luas ----
+  const cekLuas = (r, luas, nama) => { if (!near(area(r), luas, .01)) errs.push(`luas ${nama} ${area(r).toFixed(2)}`); };
+  cekLuas(tamu, 16.00, 'ruang tamu');
+  cekLuas(rug,  12.00, 'ruang keluarga');
+  cekLuas(kml,   2.88, 'KM luar');
+  cekLuas(gud,   1.80, 'gudang');
+  cekLuas(tidur, 8.32, 'kamar ortu kotor');
+  cekLuas(kmd,   2.56, 'KM dalam');
+  cekLuas(dap,   9.00, 'dapur');
+  if (!near(area(tidur) - area(kmd), 5.76, .01))
+    errs.push('kamar ortu bersih ' + (area(tidur)-area(kmd)).toFixed(2));
+  // KM dalam bersarang di kamar, jadi dikurangi sekali dari total
+  const kj = ROOMS.reduce((a,r)=>a+area(r),0) - area(kmd);
+  if (!near(kj, 50, 0.01)) errs.push('jumlah luas ruang ' + kj);
+
+  // ---- furnitur harus muat ----
+  // kasur diputar: kepala di dinding x=1,80, panjang 2,00 ke arah x, lebar 1,60 ke arah z
+  if (tidur.x1 - tidur.x0 < 2.00 + 0.30) errs.push('panjang kamar tidak muat kasur 200');
+  if (tidur.y1 - tidur.y0 < 1.60 + 0.30) errs.push('lebar kamar tidak muat kasur 160');
+  const sisaDap = dap.y1 - dap.y0 - 0.60;
+  if (sisaDap < 1.00) errs.push('jalan dapur kurang dari 1,00 m: ' + sisaDap.toFixed(2));
+  if (kml.y1 - kml.y0 < 1.60 || kml.x1 - kml.x0 < 1.20) errs.push('KM luar terlalu kecil');
+  if (gud.x1 - gud.x0 < 1.20 - 1e-6 || gud.y1 - gud.y0 < 1.00 - 1e-6) errs.push('gudang terlalu kecil');
+  if (kml.y1 - kml.y0 < 1.60 - 1e-6) errs.push('KM luar kurang panjang');
+
+  // ---- tangga: bukaan 1,20 x 1,40 di dalam ruang keluarga ----
+  const stair = { x0:1.60, x1:2.80, z0:3.60, z1:5.00 };
+  if (!(stair.x0 > rug.x0 && stair.x1 < rug.x1 && stair.z0 > rug.y0 && stair.z1 < rug.y1))
+    errs.push('bukaan tangga di luar ruang keluarga');
+  if (!near(stair.x1-stair.x0, 1.20, 1e-9) || !near(stair.z1-stair.z0, 1.40, 1e-9))
+    errs.push('ukuran bukaan tangga');
+
+  // ---- tidak boleh bertumpuk (KM dalam dikecualikan) ----
+  const isi = ROOMS.filter(r => r.id !== 'kmd');
+  for (let a = 0; a < isi.length; a++) for (let b = a+1; b < isi.length; b++){
+    const A = isi[a], B = isi[b];
+    if (A.x0 < B.x1 - 1e-3 && B.x0 < A.x1 - 1e-3 && A.y0 < B.y1 - 1e-3 && B.y0 < A.y1 - 1e-3)
+      errs.push(`ruang ${A.id} & ${B.id} bertumpuk`);
+  }
+
+  // ---- bukaan keluar dinding / bertumpuk ----
+  WALLS.forEach(w => {
+    const len = w.e - w.s;
+    const arr = [...w.bukaan].sort((a,b)=>a.s-b.s);
+    arr.forEach((b,i) => {
+      if (b.s < 0 || b.s + b.w > len + 1e-9) errs.push(`bukaan ${w.id} keluar dinding @${b.s}`);
+      if (i && arr[i-1].s + arr[i-1].w > b.s + 1e-9) errs.push(`bukaan ${w.id} bertumpuk @${b.s}`);
+    });
+  });
+
+  // ---- tiap pintu harus membuka ke ruang di kedua sisinya ----
+  // titik uji 0,30 m dari as dinding (cukup dalam untuk melewati tebal 12 cm)
+  const inRoom = (r, x, z) => x > r.x0 && x < r.x1 && z > r.y0 && z < r.y1;
+  const roomAt = (x, z) => ROOMS.filter(r => inRoom(r, x, z))[0];
+  const pintuSalah = [];
+  for (const w of WALLS.filter(q => !q.luar)) {
+    for (const b of w.bukaan.filter(q => q.jenis === 'pintu')) {
+      const pm = w.s + b.w/2 + (b.s || 0);
+      const ax = w.arah === 'v' ? w.off - 0.30 : pm;
+      const az = w.arah === 'h' ? w.off - 0.30 : pm;
+      const bx = w.arah === 'v' ? w.off + 0.30 : pm;
+      const bz = w.arah === 'h' ? w.off + 0.30 : pm;
+      if (roomAt(ax, az) && roomAt(bx, bz)) continue;
+      pintuSalah.push(w.id);
+    }
+  }
+  if (pintuSalah.length) errs.push('pintu tidak membuka ke ruang: ' + pintuSalah.join(', '));
+
+  if (errs.length) console.warn('[self-check] GAGAL:', JSON.stringify(errs));
+  else console.log(`[self-check] OK - ${foot} footplat, sloof ${sloof.toFixed(1)} m, ${W}x${D} m, total ${rp(h.total)}, ${rp(h.perM2)}/m2`);
+}
+
+renderRAB();
+selfCheck();
+setCut(330);
+$('prog').oninput = renderProg;
+document.querySelectorAll('#progJump .chip').forEach(c => c.onclick = () => {
+  $('prog').value = c.dataset.p;
+  renderProg();
+});
+renderProg();
+window.__OK = true;
+</script>
+<script>
+  setTimeout(() => { if (!window.__OK) document.getElementById('err').style.display = 'grid'; }, 7000);
+</script>
+</body>
+</html>
