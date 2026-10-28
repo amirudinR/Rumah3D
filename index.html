@@ -541,8 +541,9 @@ function buildTeras(){
   box(W,.30,.15, mat.beton2(), W/2, M.bawahBalok+.15, -TERAS+.075, G.dak);
   box(.15,.30,TERAS, mat.beton2(), .075, M.bawahBalok+.15, -TERAS/2, G.dak);
   box(.15,.30,TERAS, mat.beton2(), W-.075, M.bawahBalok+.15, -TERAS/2, G.dak);
-  // kolom teras di tepi depan (2 titik, 15/15)
-  [0.15, W-.15].forEach(x => box(.15, M.atasDak-M.bawahBalok, .15, mat.beton2(), x, (M.atasDak+M.bawahBalok)/2, -TERAS+.15, G.struct));
+  // kolom teras di tepi depan (2 titik, 15/15) - berdiri di atas lantai teras, bukan menggantung
+  [0.15, W-.15].forEach(x => box(.15, M.atasDak-M.bawahBalok, .15, mat.beton2(),
+    x, (M.atasDak+M.bawahBalok)/2, -TERAS+.15, G.struct));
   // lantai teras
   const fl = new THREE.Mesh(new THREE.BoxGeometry(W-.3, .10, TERAS-.1), mat.paving());
   fl.position.set(W/2, y-.05, -TERAS/2);
@@ -1162,7 +1163,7 @@ document.addEventListener('keyup', e => { keys[e.code] = false; });
 
 const VIEWS = {
   iso:   { p:[-8.5,9.5,12.5], t:[W/2,1.2,D/2] },
-  front: { p:[W/2,2.2,-8],   t:[W/2,1.6,D/2] },
+  front: { p:[W/2, 3.2, -TERAS-7.5], t:[W/2, 2.0, D/2] },   // di atas kanopi teras, jangan tertutup
   top:   { p:[W/2,16,D/2+.01], t:[W/2,0,D/2] },
   wide:  { p:[15,12,18],     t:[W/2,1,D/2] }
 };
