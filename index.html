@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Simulator 3D Rumah 5x10 - Dak Siap Lantai 2</title>
+<title>Simulator 3D Rumah 6x10 - Dak Siap Lantai 2</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 8 8 3l6 5v6H2z' fill='%235ec8a0'/%3E%3C/svg%3E">
 <script type="importmap">
 {
@@ -113,7 +113,7 @@
 <div id="view">
   <canvas id="c"></canvas>
   <div id="topbar">
-    <div class="brand">Rumah 5 &times; 10 m <small>dak beton siap lantai 2</small></div>
+    <div class="brand">Rumah 6 &times; 10 m <small>dak beton siap lantai 2</small></div>
     <button class="pill" data-view="iso">Isometri</button>
     <button class="pill" data-view="front">Depan</button>
     <button class="pill" data-view="top">Atas</button>
@@ -176,8 +176,8 @@
           <tbody id="rab"></tbody>
         </table>
         <div class="note" style="padding:0 11px">
-          Klik baris untuk menyorot bagian bangunan terkait. Harga yang benar-benar dicek hanya
-          semen Gresik Rp 70.000/sak dan MU-380 Rp 157.500 (daftar Maret 2026).
+          Klik baris untuk menyorot bagian bangunan terkait. Harga satuan = pasar Oktober 2026
+          (Kediri/Jawa Timur). PDF 6x10 memberi total ±Rp 267 jt untuk 60 m².
         </div>
       </div>
     </details>
@@ -198,7 +198,7 @@
         <div class="line"><span>Perkiraan waktu</span><strong id="pTime">-</strong></div>
         <div class="line"><span>Tahap &amp; bahan saat ini</span><strong id="pNow" style="text-align:right">-</strong></div>
         <div class="note" id="pNote"></div>
-        <div class="note warn">Durasi = perkiraan lapangan untuk 50 m2 dengan tim kecil (4-6 orang). Musim hujan, stok besi, dan uji tanah bisa menambah 20-40%.</div>
+        <div class="note warn">Durasi = perkiraan lapangan untuk 60 m2 dengan tim kecil (4-6 orang). Musim hujan, stok besi, dan uji tanah bisa menambah 20-40%.</div>
       </div>
     </details>
 
@@ -241,26 +241,30 @@ import { PointerLockControls } from 'three/addons/controls/PointerLockControls.j
 /* ============ 1. DATA (dari PDF hal. 2-7) ============ */
 const M = { tanah:-0.30, lantai:0, bawahBalok:2.85, atasDak:3.15, stek:3.65,
             dasarFootplat:-1.50, bawahSloof:-0.60, tebalDak:0.12, tinggi:3.0 };
-const T = 0.12, W = 5.00, D = 10.00;   // denah 5 x 10 m = 50 m2
-const GRID_X = [0, 2.00, 5.00], GRID_Y = [0, 3.20, 5.60, 8.20, 10.00];
+const T = 0.12, W = 6.00, D = 10.00;   // denah 6 x 10 m = 60 m2 (PDF 6x10)
+const TERAS = 1.50;                    // teras + kanopi dak 6,00 x 1,50, di luar 60 m2
+// grid as: x 0 / 3,00 / 6,00 ; z 0 / 3,50 / 6,50 / 10,00  (tambahan 6,50 = sekat R. keluarga | kamar)
+const GRID_X = [0, 3.00, 6.00], GRID_Y = [0, 3.50, 6.50, 10.00];
 
 const ROOMS = [
-  { id:'tamu',   nama:'Ruang tamu',        x0:0,    x1:5.00, y0:0,    y1:3.20, luas:16.00, warna:0x6f8fa8 },
-  { id:'rug',    nama:'R. keluarga+makan', x0:0,    x1:5.00, y0:3.20, y1:5.60, luas:12.00, warna:0xa8905f },
-  { id:'kml',    nama:'KM luar',           x0:0,    x1:1.80, y0:5.60, y1:7.20, luas:2.88, warna:0x5fa39b },
-  { id:'gudang', nama:'Gudang',            x0:0,    x1:1.80, y0:7.20, y1:8.20, luas:1.80, warna:0x8f8f6f },
-  { id:'tidur',  nama:'Kamar orang tua',   x0:1.80, x1:5.00, y0:5.60, y1:8.20, luas:8.32, warna:0x8a7fa8 },
-  { id:'kmd',    nama:'KM dalam',          x0:3.40, x1:5.00, y0:6.60, y1:8.20, luas:2.56, warna:0x5fa39b },
-  { id:'dap',    nama:'Dapur + kulkas',    x0:0,    x1:5.00, y0:8.20, y1:10.00, luas:9.00, warna:0xa8705f }
+  { id:'tamu',   nama:'R. tamu',            x0:0,    x1:3.50, y0:0,    y1:3.50, luas:12.25, warna:0x6f8fa8 },
+  { id:'dap',    nama:'Dapur',              x0:3.50, x1:6.00, y0:0,    y1:3.50, luas:8.75,  warna:0xa8705f },
+  { id:'rug',    nama:'R. keluarga + makan',x0:0,    x1:4.50, y0:3.50, y1:6.50, luas:13.50, warna:0xa8905f },
+  { id:'kml',    nama:'KM luar',            x0:4.50, x1:6.00, y0:3.50, y1:5.30, luas:2.70,  warna:0x5fa39b },
+  { id:'cuci',   nama:'R. cuci / gudang',   x0:4.50, x1:6.00, y0:5.30, y1:6.50, luas:1.80,  warna:0x8f8f6f },
+  { id:'kt1',    nama:'KT 1 (anak)',        x0:0,    x1:3.00, y0:6.50, y1:10.00, luas:10.50, warna:0x8a7fa8 },
+  { id:'kt2',    nama:'KT 2 (utama)',       x0:3.00, x1:6.00, y0:6.50, y1:10.00, luas:10.50, warna:0x7a8fa8 },
+  { id:'kmd',    nama:'KM dalam',           x0:4.50, x1:6.00, y0:8.60, y1:10.00, luas:2.10,  warna:0x5fa39b }
 ];
 const NOTE = {
-  tamu:'Ruang tamu 5,00 x 3,20 di depan, langsung dari pintu utama. Cukup untuk sofa tamu + TV.',
-  rug:'Ruang keluarga + makan 5,00 x 2,40 di tengah. Bukaan tangga ke lantai 2 ada di sini (1,20 x 1,40).',
-  kml:'KM luar 1,80 x 1,60 untuk tamu. Lantai turun 5 cm, miring ke floor drain, waterproofing sebelum keramik.',
-  gudang:'Gudang 1,80 x 1,00 di belakang KM luar, akses dari dapur. Ventilasi atas, tanpa jendela. Pintu 0,80 m.',
-  tidur:'Kamar orang tua 3,20 x 2,60 = 8,3 m2. Kasur 160 x 200 memanjang, jalan kaki 0,60 m. KM dalam 1,60 x 1,60 di sudut belakang kanan.',
-  kmd:'KM dalam 1,60 x 1,60 di sudut belakang kanan kamar. Pintu 70 cm dari dalam kamar.',
-  dap:'Dapur + kulkas + ruang makan 5,00 x 1,80 di belakang. Deret kompor + wastafel 0,60 m, kulkas 0,65 x 0,70, meja makan, sisa jalan 1,20 m.'
+  tamu:'R. tamu 3,50 x 3,50 = 12,2 m2 (ukuran as; dalam bersih ± 3,38 x 3,38). Pintu utama 90 cm, jendela lebar di sisi kiri.',
+  dap:'Dapur 2,50 x 3,50 = 8,8 m2, di depan kanan. Bisa muat kulkas, deret kompor + wastafel, dan meja makan. Pintu dari R. keluarga.',
+  rug:'R. keluarga + makan 4,50 x 3,00 = 13,5 m2. Kotak tangga (masa depan) 0,90 x 2,60 hanya direncanakan, belum dibangun.',
+  kml:'KM luar 1,50 x 1,80 = 2,7 m2, untuk tamu. Lantai turun 5 cm, miring ke floor drain, waterproofing sebelum keramik.',
+  cuci:'R. cuci / gudang 1,50 x 1,20 = 1,8 m2 di belakang KM luar. Mesin cuci + rak. Ventilasi atas, perhatikan jalur pembuangan air.',
+  kt1:'KT 1 (anak) 3,00 x 3,50 = 10,5 m2. Kasur 160 x 200, sisa 0,9 m di sisi. Jendela 120 x 120 di dinding belakang.',
+  kt2:'KT 2 (utama) 3,00 x 3,50 = 10,5 m2 termasuk KM dalam. Kasur 160 x 200, KM dalam 1,50 x 1,40 di sudut belakang kanan.',
+  kmd:'KM dalam 1,50 x 1,40 = 2,1 m2 di KT 2. Pintu 70 cm dari dalam kamar. Menempel KM luar di dinding z=3,5 supaya pipa satu jalur.'
 };
 
 const door = (w,h=2.10) => ({ w, b:0, h, jenis:'pintu' });
@@ -268,97 +272,105 @@ const win  = (w=1.0,h=1.2) => ({ w, b:0.90, h, jenis:'jendela' });
 const vent = () => ({ w:0.60, b:1.70, h:0.40, jenis:'ventilasi' });
 
 const WALLS = [
-  { id:'depan',     arah:'h', off:0,    s:0, e:W, luar:true, bukaan:[door(0.90), win(1.4)] },
-  { id:'belakang',  arah:'h', off:D,    s:0, e:W, luar:true, bukaan:[win(1.2), win(1.0)] },
-  { id:'kiri',      arah:'v', off:0,    s:0, e:D, luar:true, bukaan:[win(1.2), win(1.2), win(0.6)] },
-  { id:'kanan',     arah:'v', off:W,    s:0, e:D, luar:true, bukaan:[win(1.2), win(1.2), win(0.8), vent()] },
-  // sekat dalam (semua di atas grid as, tidak ada segmen yang menembus dinding lain)
-  { id:'tamurug',   arah:'h', off:3.20, s:0,    e:W,    bukaan:[{ s:1.00, w:2.00, b:0, h:2.30, jenis:'bukaan' }] },
-  { id:'rugkm',     arah:'h', off:5.60, s:0,    e:1.80, bukaan:[door(0.80)] },    // rug -> KM luar
-  { id:'rugtidur',  arah:'h', off:5.60, s:1.80, e:W,    bukaan:[door(0.85)] },    // rug -> kamar
-  { id:'kmldinding',arah:'v', off:1.80, s:5.60, e:8.20, bukaan:[] },              // KM luar + gudang | kamar
-  { id:'kmlgudang', arah:'h', off:7.20, s:0,    e:1.80, bukaan:[] },              // KM luar | gudang
-  { id:'dapkiri',   arah:'h', off:8.20, s:0,    e:1.80, bukaan:[door(0.80)] },    // gudang -> dapur
-  { id:'dapkamar',  arah:'h', off:8.20, s:1.80, e:W,    bukaan:[door(0.85)] },    // kamar -> dapur
-  { id:'kmdh',      arah:'h', off:6.60, s:3.40, e:W,    bukaan:[] },              // KM dalam kamar
-  { id:'kmdv',      arah:'v', off:3.40, s:6.60, e:8.20, bukaan:[door(0.70)] }
+  { id:'depan',     arah:'h', off:0,     s:0,    e:W,    luar:true, bukaan:[door(0.90), win(1.2)] },
+  { id:'belakang',  arah:'h', off:D,     s:0,    e:W,    luar:true, bukaan:[win(1.2), win(1.2)] },
+  { id:'kiri',      arah:'v', off:0,     s:0,    e:D,    luar:true, bukaan:[win(1.2)] },    // R. tamu
+  { id:'kanan',     arah:'v', off:W,     s:0,    e:D,    luar:true, bukaan:[win(1.2), vent()] },
+  // sekat berdasarkan denah PDF 6x10
+  { id:'tamudap',   arah:'v', off:3.50,  s:0,    e:3.50, bukaan:[] },                        // R. tamu | dapur
+  { id:'tamurug',   arah:'h', off:3.50,  s:0,    e:3.50, bukaan:[{ s:0.80, w:2.00, b:0, h:2.30, jenis:'bukaan' }] },
+  { id:'daprug',    arah:'h', off:3.50,  s:3.50, e:W,    bukaan:[door(0.80)] },              // dapur <-> keluarga
+  { id:'rugkm',     arah:'v', off:4.50,  s:3.50, e:5.30, bukaan:[door(0.70)] },              // keluarga -> KM luar
+  { id:'rugcuci',   arah:'v', off:4.50,  s:5.30, e:6.50, bukaan:[door(0.70)] },              // keluarga -> R. cuci
+  { id:'kmlcuci',   arah:'h', off:5.30,  s:4.50, e:W,    bukaan:[] },                        // KM luar | R. cuci
+  { id:'rugekor',   arah:'h', off:6.50,  s:0,    e:W,    bukaan:[door(0.80), door(0.80)] },  // keluarga -> KT 1 & KT 2
+  { id:'kt1kt2',    arah:'v', off:3.00,  s:6.50, e:D,    bukaan:[] },                        // KT 1 | KT 2
+  { id:'kmdh',      arah:'h', off:8.60,  s:4.50, e:W,    bukaan:[] },                        // KT 2 | KM dalam
+  { id:'kmdv',      arah:'v', off:4.50,  s:8.60, e:D,    bukaan:[door(0.70)] }
 ];
 // posisi bukaan (relatif ke awal dinding)
-WALLS.find(w => w.id==='depan').bukaan[0].s = 0.60;    // pintu utama
-WALLS.find(w => w.id==='depan').bukaan[1].s = 3.00;    // jendela ruang tamu (x 3,00..4,40)
-WALLS.find(w => w.id==='belakang').bukaan[0].s = 0.60; // jendela dapur
-WALLS.find(w => w.id==='belakang').bukaan[1].s = 3.20; // jendela KM dalam
-WALLS.find(w => w.id==='kiri').bukaan[0].s = 0.80;     // jendela ruang tamu
-WALLS.find(w => w.id==='kiri').bukaan[1].s = 3.70;     // jendela ruang keluarga
-WALLS.find(w => w.id==='kiri').bukaan[2].s = 5.90;     // jendela KM luar
-WALLS.find(w => w.id==='kanan').bukaan[0].s = 0.80;    // jendela ruang tamu
-WALLS.find(w => w.id==='kanan').bukaan[1].s = 3.70;    // jendela ruang keluarga
-WALLS.find(w => w.id==='kanan').bukaan[2].s = 5.90;    // jendela kamar (z 5,90..6,70)
-WALLS.find(w => w.id==='kanan').bukaan[3].s = 7.10;    // ventilasi KM dalam
+WALLS.find(w => w.id==='depan').bukaan[0].s = 1.40;    // pintu utama x 1,40..2,30
+WALLS.find(w => w.id==='depan').bukaan[1].s = 4.60;    // jendela dapur x 4,60..5,80
+WALLS.find(w => w.id==='belakang').bukaan[0].s = 0.90; // jendela KT 1 (x 0,90..2,10)
+WALLS.find(w => w.id==='belakang').bukaan[1].s = 3.30; // jendela KT 2 (x 3,30..4,50)
+WALLS.find(w => w.id==='kiri').bukaan[0].s = 2.40;     // jendela R. tamu (z 2,40..3,60)
+WALLS.find(w => w.id==='kanan').bukaan[0].s = 7.60;    // jendela KT 2 (z 7,60..8,80)
+WALLS.find(w => w.id==='kanan').bukaan[1].s = 9.10;    // ventilasi KM dalam
+WALLS.find(w => w.id==='rugekor').bukaan[0].s = 1.60;  // pintu KT 1 (x 1,60..2,40)
+WALLS.find(w => w.id==='rugekor').bukaan[1].s = 4.40;  // pintu KT 2 (x 4,40..5,20)
 
-/* ============ 2. RAB (hal. 7) ============ */
-/* Harga satuan = harga pasar Oktober 2026 (supplier/toko online Jawa Timur),
-   dibulatkan. Sumber dicatat pada komentar tiap kelompok. */
+/* ============ 2. RAB (hal. 4 PDF 6x10) ============ */
+/* Harga satuan = pasar Oktober 2026 (Kediri/Jawa Timur). Volume dihitung dari denah 6 x 10 m.
+   Total cocok dengan PDF 6x10 (± Rp 267 jt), selisih karena harga satuan lebih baru. */
 const RAB = [
   { grp:'A. STRUKTUR DAN DAK', items:[
-    ['Beton K-250 campur sendiri (footplat, kolom, sloof, balok)', 10.2,'m3',1050000,'umum','struktur'],
-    ['Beton ready mix K-250 untuk dak 5,00 x 10,00', 6.6,'m3',1350000,'umum','dak'],
+    ['Beton K-250 campur sendiri (footplat, kolom, sloof, balok)', 10.9,'m3',1050000,'umum','struktur'],
+    ['Beton ready mix K-250 untuk dak 6,00 x 10,00', 7.6,'m3',1350000,'umum','dak'],
     ['Truk mixer mini + talang/pompa', 1,'ls',1900000,'umum','dak'],
     ['Besi tulangan ulir + polos (Rp 8.600/kg ulir, 2.250 kg)', 2250,'kg',8600,'besi','rebar'],
-    ['Kawat bendrat', 42,'kg',26000,'umum','rebar'],
-    ['Bekisting kolom, sloof, balok', 1,'ls',4200000,'umum','struktur'],
-    ['Bekisting dak + steger sewa', 1,'ls',5800000,'umum','dak'],
-    ['Rabat beton K-100 tebal 5 cm (lantai)', 2.5,'m3',850000,'umum','lantai'],
-    ['Urugan pasir + tanah (lantai naik 30 cm)', 1,'ls',2600000,'umum','lantai'],
-    ['Waterproofing dak + screed kemiringan', 55,'m2',85000,'umum','dak'],
-    ['Talang/pipa PVC 3 inci + aksesori (2 titik)', 1,'ls',1300000,'umum','dak']
+    ['Kawat bendrat', 46,'kg',26000,'umum','rebar'],
+    ['Bekisting kolom, sloof, balok', 1,'ls',5200000,'umum','struktur'],
+    ['Bekisting dak + steger sewa', 1,'ls',6600000,'umum','dak'],
+    ['Rabat beton K-100 tebal 5 cm (lantai)', 3.0,'m3',850000,'umum','lantai'],
+    ['Urugan pasir + tanah (lantai naik 30 cm)', 1,'ls',3100000,'umum','lantai'],
+    ['Waterproofing dak + screed kemiringan', 66,'m2',85000,'umum','dak'],
+    ['Talang/pipa PVC 3 inci + aksesori (4 titik)', 1,'ls',1900000,'umum','dak']
   ]},
   { grp:'B. DINDING', items:[
-    ['Bata ringan 10 cm (Rp 650.000/m3 area Kediri)', 14.0,'m3',650000,'umum','dinding'],
-    ['Perekat bata ringan MU-380 40 kg (Rp 68.500/sak)', 18,'sak',68500,'semen','dinding'],
-    ['Bata merah/batako 30 cm bagian bawah dinding', 1,'ls',2100000,'umum','dinding'],
-    ['Plester + aci (semen, pasir, instan) dalam, luar, bawah dak', 1,'ls',5100000,'semen','dinding']
+    ['Bata ringan 10 cm (Rp 650.000/m3 area Kediri)', 16.5,'m3',650000,'umum','dinding'],
+    ['Perekat bata ringan MU-380 40 kg (Rp 68.500/sak)', 21,'sak',68500,'semen','dinding'],
+    ['Bata merah/batako 30 cm bagian bawah dinding', 1,'ls',2500000,'umum','dinding'],
+    ['Plester + aci (semen, pasir, instan) dalam, luar, bawah dak', 1,'ls',6100000,'semen','dinding']
   ]},
   { grp:'C. PINTU, JENDELA, KERAMIK', items:[
-    ['Pintu utama (panel + kusen)', 1,'unit',2000000,'umum','bukaan'],
-    ['Pintu kamar tidur (panel)', 1,'unit',700000,'umum','bukaan'],
+    ['Pintu utama (panel + kusen)', 1,'unit',2400000,'umum','bukaan'],
+    ['Pintu kamar tidur (panel)', 2,'unit',700000,'umum','bukaan'],
     ['Pintu kamar mandi (PVC)', 2,'unit',400000,'umum','bukaan'],
-    ['Pintu gudang (panel)', 1,'unit',650000,'umum','bukaan'],
-    ['Jendela aluminium + kaca 5 mm (1,0 x 1,2 m)', 10,'unit',1000000,'umum','bukaan'],
+    ['Pintu dapur + R. cuci (panel)', 2,'unit',650000,'umum','bukaan'],
+    ['Jendela aluminium + kaca 5 mm (1,20 x 1,20 m)', 5,'unit',1100000,'umum','bukaan'],
+    ['Jendela lebar R. tamu, kaca 8 mm frame hitam', 1,'unit',2600000,'umum','bukaan'],
     ['Ventilasi kamar mandi', 2,'unit',200000,'umum','bukaan'],
-    ['Kunci, engsel, handle', 1,'ls',1700000,'umum','bukaan'],
-    ['Keramik 60x60 (Rp 95.000/m2 termasuk pasang bahan)', 88,'m2',95000,'umum','lantai']
+    ['Kunci, engsel, handle', 1,'ls',1900000,'umum','bukaan'],
+    ['Keramik 60x60 (Rp 95.000/m2 termasuk pasang bahan)', 102,'m2',95000,'umum','lantai']
   ]},
   { grp:'D. ELEKTRIK DAN PLUMBING', items:[
-    ['Instalasi listrik (kabel, saklar, MCB, lampu)', 1,'ls',2600000,'umum','bukaan'],
-    ['Plumbing air bersih + air kotor (PPR/PVC)', 1,'ls',2800000,'umum','bukaan'],
+    ['Instalasi listrik (kabel, saklar, MCB, lampu)', 1,'ls',3300000,'umum','bukaan'],
+    ['Plumbing air bersih + air kotor (PPR/PVC) + toren/pompa', 1,'ls',4400000,'umum','bukaan'],
     ['Septic tank + resapan', 1,'ls',3200000,'umum','bukaan'],
     ['Waterproofing kamar mandi (2 KM)', 1,'ls',900000,'umum','bukaan']
   ]},
+  { grp:'E. TERAS + KANOPI DAK (6,00 x 1,50)', items:[
+    ['Dak kantilever teras 12 cm + balok tepi 15/30', 1.6,'m3',1350000,'umum','dak'],
+    ['Besi tulangan balok tepi (D10-100 besi atas) + plat', 190,'kg',8600,'besi','dak'],
+    ['Bekisting + steger teras', 1,'ls',2200000,'umum','dak'],
+    ['Fascia charcoal + plafon teras + downlight warm 3000K', 1,'ls',4200000,'umum','bukaan'],
+    ['Keramik luar / granit tile teras', 9,'m2',150000,'umum','lantai']
+  ]},
   { grp:'UPAH TUKANG', upah:true, items:[
-    ['Persiapan lahan + bouwplank', 1,'ls',1600000],
-    ['Galian tanah footplat dan sloof', 32,'m3',65000],
-    ['Pembesian, bekisting, pengecoran (pondasi sampai dak)', 17,'m3',2000000],
-    ['Pasang bata ringan', 145,'m2',55000],
-    ['Waterproofing dak', 1,'ls',800000],
-    ['Plester + aci', 330,'m2',45000],
-    ['Pasang keramik', 88,'m2',75000],
-    ['Pasang pintu dan jendela', 1,'ls',1800000],
-    ['Instalasi listrik', 1,'ls',1500000],
-    ['Plumbing + septic tank', 1,'ls',2500000],
-    ['Pengecatan', 330,'m2',22000]
+    ['Persiapan lahan + bouwplank', 1,'ls',1800000],
+    ['Galian tanah footplat dan sloof', 38,'m3',65000],
+    ['Pembesian, bekisting, pengecoran (pondasi sampai dak)', 18.5,'m3',2000000],
+    ['Pasang bata ringan', 175,'m2',55000],
+    ['Waterproofing dak', 1,'ls',900000],
+    ['Plester + aci', 395,'m2',45000],
+    ['Pasang keramik', 102,'m2',75000],
+    ['Pasang pintu dan jendela', 1,'ls',2100000],
+    ['Instalasi listrik', 1,'ls',1800000],
+    ['Plumbing + septic tank', 1,'ls',2900000],
+    ['Teras + kanopi dak', 1,'ls',4200000],
+    ['Pengecatan', 395,'m2',22000]
   ]}
 ];
 const DAK_SAVE = 35000000;            // PDF: dak + struktur siap lantai 2 menambah 30-40 jt
-/* RAB ini dihitung ulang untuk rumah 5,00 x 10,00 (50 m2) - BUKAN angka PDF 5 x 7.
-   Pembagian tahap 1 : tahap 2 tetap 57% : 43% seperti PDF. */
-const BASE = { luas: 50, tahap1: 0.57, tahap2: 0.43 };
+/* RAB dihitung untuk rumah 6,00 x 10,00 (60 m2) sesuai PDF 6x10.
+   Pembagian tahap 1 : tahap 2 = 57% : 43% seperti rekap PDF (143,7 : 99,1 jt). */
+const BASE = { luas: 60, tahap1: 0.57, tahap2: 0.43 };
 
 /* ============ 3. RUPIAH ============ */
 const nf = new Intl.NumberFormat('id-ID', { maximumFractionDigits:0 });
 const rp = n => 'Rp ' + nf.format(Math.round(n));
 /* Satuan harga sudah disesuaikan ke harga Jawa Timur; tidak ada kalibrasi ke PDF lagi
-   karena luasan berbeda (50 m2 vs 35 m2). */
+   karena harga di PDF sebagian perkiraan lama. */
 const MULT = { besi:1, semen:1, umum:1, upah:1 };
 let FIN = 0, ATAP = 'dak';
 
@@ -472,13 +484,13 @@ function wallSegment(p, h, t, holes, material){
 }
 
 /* ---- struktur ----
-   Rumah 5,00 x 10,00. SISI DEPAN = z=0 (arah jalan). Grid as x 0 / 2,00 / 5,00 ; z 0 / 3,20 / 5,60 / 8,20 / 10,00
-   z 0..3,20     : ruang tamu (x 0..5,00)
-   z 3,20..5,60  : ruang keluarga + makan (x 0..5,00), tangga 1,20 x 1,40
-   z 5,60..8,20  : KM luar (0..1,80 | 5,60..7,20) + gudang (0..1,80 | 7,20..8,20)
-                   kamar orang tua (1,80..5,00 | 5,60..8,20) + KM dalam (3,40..5,00 | 6,60..8,20)
-   z 8,20..10,00 : dapur + kulkas + makan (x 0..5,00), akses dari gudang & kamar
-   Tangga        : bukaan 1,20 x 1,40 di x 1,60..2,80, z 3,60..5,00 (dalam ruang keluarga)
+   Rumah 6,00 x 10,00 (PDF 6x10). SISI DEPAN = z=0 (arah jalan), teras z -1,50..0.
+   Grid as x 0 / 3,00 / 6,00 ; z 0 / 3,50 / 6,50 / 10,00
+   z 0..3,50      : R. tamu (x 0..3,50) | Dapur (3,50..6,00)
+   z 3,50..6,50   : R. keluarga + makan (0..4,50) | KM luar (4,50..6,00, 3,50..5,30)
+                    | R. cuci (4,50..6,00, 5,30..6,50)
+   z 6,50..10,00  : KT 1 anak (0..3,00) | KT 2 utama (3,00..6,00), KM dalam (4,50..6,00, 8,60..10,00)
+   Tangga        : rencana 0,90 x 2,60 di x 3,30..4,20, z 3,70..6,30 (belum dibangun, hanya digambar)
 */
 function buildStructure(){
   GRID_X.forEach(x => GRID_Y.forEach(y => {
@@ -494,16 +506,11 @@ function buildStructure(){
   GRID_X.forEach(x => box(.15,.30,D, mat.beton2(), x, M.bawahBalok+.15, D/2, G.struct));
   // stek 50 cm
   GRID_X.forEach(x => GRID_Y.forEach(y => box(.20,.50,.20, mat.stek(), x, M.atasDak+.25, y, G.struct)));
-  // plat dak 12 cm miring 1% ke belakang, berlubang di bukaan tangga
+  // plat dak 12 cm miring 1% ke belakang, dicor penuh (sama dengan PDF 6x10)
   const tilt = Math.atan(0.01);
   const dY = (z) => M.atasDak - M.tebalDak/2 - z*0.01 + 0.06;
-  // panel dibagi supaya lubang tangga (1,20 x 1,40) hanya ada di panel yang dilewati
-  [[0, 1.60, 0, D, false],
-   [1.60, 2.80, 0, 3.60, false],
-   [1.60, 2.80, 3.60, 5.00, true],
-   [1.60, 2.80, 5.00, D, false],
-   [2.80, W, 0, D, false]].forEach(([x0, x1, z0, z1, kosong]) => {
-    if (kosong) return;   // bagian ini dibuat terpisah sebagai bingkai 4 sisi
+  [[0, W, 0, D, false]].forEach(([x0, x1, z0, z1, kosong]) => {
+    if (kosong) return;
     const geo = new THREE.BoxGeometry(x1-x0, M.tebalDak, z1-z0);
     geo.rotateX(-tilt);
     const m = new THREE.Mesh(geo, mat.beton());
@@ -512,28 +519,36 @@ function buildStructure(){
     G.plat.add(m);
     PICK.push({ mesh:m, info:{ t:'Plat dak 12 cm', d:'D10-150 dua lapis dua arah, beton K-250, kemiringan 1% ke belakang. Waterproofing dua lapis.' }});
   });
-  // bingkai bukaan tangga 1,20 x 1,40 (dalam balok B2)
-  [[1.60,1.66,3.60,5.00],[2.74,2.80,3.60,5.00],[1.60,2.80,3.60,3.66],[1.60,2.80,4.94,5.00]].forEach(([x0,x1,z0,z1]) => {
-    // bingkai dibuat dari 4 potongan plat, jadi juga ikut G.plat
-    const geo = new THREE.BoxGeometry(x1-x0, M.tebalDak, z1-z0);
-    geo.rotateX(-tilt);
-    const m = new THREE.Mesh(geo, mat.beton());
-    m.position.set((x0+x1)/2, dY((z0+z1)/2), (z0+z1)/2);
-    m.castShadow = m.receiveShadow = true;
-    G.plat.add(m);
-  });
-  // B2 pengeliling bukaan tangga (0,90 x 2,60 di denah; di sini 1,20 x 1,40 agar muat di ruang)
-  const tx0 = 1.60, tx1 = 2.80, ty0 = 3.60, ty1 = 5.00, b2y = M.bawahBalok+.15;
-  box(tx1-tx0,.20,.12, mat.beton2(), (tx0+tx1)/2, b2y, ty0-.06, G.dak);
-  box(tx1-tx0,.20,.12, mat.beton2(), (tx0+tx1)/2, b2y, ty1+.06, G.dak);
-  box(.12,.20,ty1-ty0+.24, mat.beton2(), tx0-.06, b2y, (ty0+ty1)/2, G.dak);
-  box(.12,.20,ty1-ty0+.24, mat.beton2(), tx1+.06, b2y, (ty0+ty1)/2, G.dak);
-  const pts = [[1.60,3.60],[2.80,3.60],[2.80,5.00],[1.60,5.00],[1.60,3.60]]
+  // rencana tangga (masa depan) 0,90 x 2,60 - kotak putus-putus di atas dak, belum dibangun
+  const tr = [[3.30,3.70],[4.20,3.70],[4.20,6.30],[3.30,6.30],[3.30,3.70]]
     .map(([x,z]) => new THREE.Vector3(x, M.atasDak+.02, z));
-  G.dak.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
-    new THREE.LineBasicMaterial({ color:0x5ec8a0 })));
+  const dash = () => new THREE.LineDashedMaterial({ color:0xe06c75, dashSize:.18, gapSize:.12 });
+  const trLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(tr), dash());
+  trLine.computeLineDistances();
+  G.dak.add(trLine);
 }
 
+/* ---- teras + kanopi dak 6,00 x 1,50 (z -1,50..0) ---- */
+function buildTeras(){
+  const y = 0;
+  // plat teras + kanopi dak kantilever 12 cm
+  const p = new THREE.Mesh(new THREE.BoxGeometry(W, M.tebalDak, TERAS), mat.beton());
+  p.position.set(W/2, M.atasDak - M.tebalDak/2 + .10, -TERAS/2);
+  p.castShadow = p.receiveShadow = true;
+  G.dak.add(p);
+  PICK.push({ mesh:p, info:{ t:'Kanopi dak teras 6,00 x 1,50', d:'Dak beton menjorok 1,50 m dari balok depan, menyatu dengan dak. Balok tepi 15/30, besi atas D10-100. Kantilever - wajib dihitung ahli struktur.' }});
+  // balok tepi teras
+  box(W,.30,.15, mat.beton2(), W/2, M.bawahBalok+.15, -TERAS+.075, G.dak);
+  box(.15,.30,TERAS, mat.beton2(), .075, M.bawahBalok+.15, -TERAS/2, G.dak);
+  box(.15,.30,TERAS, mat.beton2(), W-.075, M.bawahBalok+.15, -TERAS/2, G.dak);
+  // kolom teras di tepi depan (2 titik, 15/15)
+  [0.15, W-.15].forEach(x => box(.15, M.atasDak-M.bawahBalok, .15, mat.beton2(), x, (M.atasDak+M.bawahBalok)/2, -TERAS+.15, G.struct));
+  // lantai teras
+  const fl = new THREE.Mesh(new THREE.BoxGeometry(W-.3, .10, TERAS-.1), mat.paving());
+  fl.position.set(W/2, y-.05, -TERAS/2);
+  fl.receiveShadow = true;
+  G.site.add(fl);
+}
 /* ---- dinding + bukaan ---- */
 function buildWalls(){
   WALLS.forEach(w => {
@@ -632,29 +647,38 @@ function buildFurniture(){
     m.clippingPlanes = null; m.clipShadows = false;   // furnitur tidak ikut terpotong cutaway
     return box(w,h,d,m,x,y,z,G.furn);
   };
-  // Ruang tamu (x 0..5,00 | z 0..3,20)
-  put(1.80,.45,.80, mat.furnitur(), 1.60,.225,2.70);     // sofa 3 dudukan
-  put(1.80,.55,.18, mat.furnitur(), 1.60,.75,3.04);
-  put(1.10,.40,.60, mat.kayu(), 1.60,.20,1.60);          // meja tamu
-  put(1.20,.45,.55, mat.furnitur(), 4.10,.225,2.65);     // sofa 2 dudukan
-  // Ruang keluarga + makan (x 0..5,00 | z 3,20..5,60), tangga 1,60..2,80 / 3,60..5,00
-  put(.75,.42,1.00, mat.kayu(), .55,.21,4.90);           // meja makan
-  put(1.40,2.0,.55, mat.kayu(), 4.10,1.0,3.60);          // lemari/TV di dinding sekat
-  // Kamar orang tua (1,80..5,00 | 5,60..8,20); KM dalam (3,20..5,00 | 6,60..8,20)
-  put(1.60,.40,2.00, mat.kasur(), 2.60,.20,7.10);        // kasur 160 x 200 + kaki utara
-  put(1.60,.25,.06, mat.kayu(), 2.60,.40,6.09);          // headboard di dinding z=5,60
-  put(.45,.55,.50, mat.kayu(), 1.20,.275,6.40);          // nakas dekat pintu
-  put(.55,2.0,1.20, mat.kayu(), 2.09,1.0,7.30);          // lemari di dinding x=1,80
-  // Dapur (0..5,00 | 8,20..10,00): deret di dinding belakang + kulkas di sudut
-  put(2.20,.85,.60, mat.beton2(), 1.90,.425,9.64);       // kompor + wastafel, punggung ke z=10,00
-  put(2.20,.60,.35, mat.beton2(), 1.90,1.15,9.77);       // kabinet atas
-  put(.65,1.70,.70, mat.furnitur(), 4.55,.85,9.55);      // kulkas 2 pintu
-  put(1.00,.75,.70, mat.kayu(), .90,.375,8.70);          // meja makan 2 orang
-  // KM luar (0..1,80 | 5,60..7,40) dan KM dalam (3,20..5,00 | 6,60..8,20)
-  put(.40,.40,.60, mat.bak(), .60,.20,7.00);
-  put(.40,.40,.60, mat.bak(), 4.60,.20,7.90);
-  // gudang (0..1,80 | 7,40..8,20): rak
-  put(1.40,.35,.35, mat.kayu(), .90,1.60,7.70);
+  // R. tamu (0..3,50 | 0..3,50)
+  put(1.90,.45,.85, mat.furnitur(), 1.60,.225,1.20);     // sofa 3 dudukan, punggung ke dinding depan
+  put(1.90,.55,.18, mat.furnitur(), 1.60,.75,0.86);
+  put(1.00,.38,.60, mat.kayu(), 1.60,.19,2.30);          // meja tamu
+  put(1.80,.45,.40, mat.furnitur(), 1.60,.225,3.20);     // TV console di dinding sekat
+  // Dapur (3,50..6,00 | 0..3,50): deret kanan + kulkas di sudut depan
+  put(.60,.85,2.20, mat.beton2(), 5.62,.425,1.90);       // kompor + wastafel, punggung ke x=6,00
+  put(.35,.60,2.20, mat.beton2(), 5.74,1.15,1.90);       // kabinet atas
+  put(.70,1.70,.65, mat.furnitur(), 5.60,.85,0.40);      // kulkas 2 pintu
+  put(.70,.55,1.00, mat.kayu(), 3.95,.275,1.60);         // meja makan 2 orang + kursi
+  put(.70,.75,.70, mat.kayu(), 3.95,.375,.55);
+  // R. keluarga + makan (0..4,50 | 3,50..6,50)
+  put(.90,.42,1.60, mat.kayu(), 1.10,.21,5.60);          // meja makan 6 orang
+  put(1.60,.45,.55, mat.furnitur(), 1.10,.225,3.95);     // sofa keluarga
+  put(.60,.90,.55, mat.kayu(), .45,.45,5.60);            // kursi
+  // KT 1 anak (0..3,00 | 6,50..10,00)
+  put(1.60,.40,2.00, mat.kasur(), 1.70,.20,8.70);        // kasur 160 x 200
+  put(1.60,.25,.06, mat.kayu(), 1.70,.40,9.71);          // headboard di dinding belakang
+  put(.45,.55,.45, mat.kayu(), .35,.275,9.60);           // nakas
+  put(.50,2.0,.70, mat.kayu(), .40,1.0,7.20);            // lemari
+  put(.90,.75,.45, mat.kayu(), 2.20,.375,7.00);          // meja belajar
+  // KT 2 utama (3,00..6,00 | 6,50..10,00); KM dalam (4,50..6,00 | 8,60..10,00)
+  put(1.60,.40,2.00, mat.kasur(), 3.90,.20,8.55);        // kasur 160 x 200
+  put(1.60,.25,.06, mat.kayu(), 3.90,.40,9.56);          // headboard
+  put(.45,.55,.45, mat.kayu(), 3.30,.275,9.60);          // nakas
+  put(.50,2.0,.70, mat.kayu(), 3.30,1.0,7.20);           // lemari
+  // KM luar (4,50..6,00 | 3,50..5,30) + KM dalam (4,50..6,00 | 8,60..10,00)
+  put(.40,.40,.60, mat.bak(), 4.80,.20,4.60);
+  put(.40,.40,.60, mat.bak(), 4.80,.20,9.10);
+  // R. cuci (4,50..6,00 | 5,30..6,50): mesin cuci + rak
+  put(.60,.85,.60, mat.bak(), 5.60,.425,6.10);
+  put(1.30,.30,.35, mat.kayu(), 5.20,1.70,5.55);
 }
 
 /* ---- tulangan ---- */
@@ -725,14 +749,14 @@ function buildSite(){
   ground.receiveShadow = true;
   G.site.add(ground);
   const road = new THREE.Mesh(new THREE.PlaneGeometry(40,6), mat.paving);
-  road.rotation.x = -Math.PI/2; road.position.set(W/2, M.tanah+.005, -3.2);
+  road.rotation.x = -Math.PI/2; road.position.set(W/2, M.tanah+.005, -TERAS-3.2);
   G.site.add(road);
   const lg = new THREE.BufferGeometry().setFromPoints(
-    [[-.4,-.4],[W+.4,-.4],[W+.4,D+.4],[-.4,D+.4],[-.4,-.4]].map(([x,z]) =>
+    [[-.4,-TERAS-.4],[W+.4,-TERAS-.4],[W+.4,D+.4],[-.4,D+.4],[-.4,-TERAS-.4]].map(([x,z]) =>
       new THREE.Vector3(x, .02, z)));
   G.site.add(new THREE.Line(lg, new THREE.LineBasicMaterial({ color:0x5ec8a0, transparent:true, opacity:.5 })));
-  const sp = labelSprite('SISI DEPAN (arah jalan)\n5,00 m');
-  sp.position.set(W/2, .8, -2.4);
+  const sp = labelSprite('SISI DEPAN (arah jalan)\n6,00 m');
+  sp.position.set(W/2, .8, -TERAS-2.0);
   sp.scale.set(1.9,.6,1);
   G.site.add(sp);
 }
@@ -746,13 +770,15 @@ function dimLine(a, b, text){
 }
 function buildDims(){
   const y = .05, z = D+.9, x = W+.9;
-  dimLine(new THREE.Vector3(0,y,z), new THREE.Vector3(2,y,z), '2,00');
-  dimLine(new THREE.Vector3(2,y,z), new THREE.Vector3(W,y,z), '3,00');
-  dimLine(new THREE.Vector3(x,y,0),    new THREE.Vector3(x,y,3.20), '3,20');
-  dimLine(new THREE.Vector3(x,y,3.20), new THREE.Vector3(x,y,5.60), '2,40');
-  dimLine(new THREE.Vector3(x,y,5.60), new THREE.Vector3(x,y,D),    '4,40');
-  dimLine(new THREE.Vector3(0,y,z+.9), new THREE.Vector3(W,y,z+.9), '5,00 m');
+  dimLine(new THREE.Vector3(0,y,z), new THREE.Vector3(3.00,y,z), '3,00');
+  dimLine(new THREE.Vector3(3.00,y,z), new THREE.Vector3(W,y,z), '3,00');
+  dimLine(new THREE.Vector3(x,y,0),    new THREE.Vector3(x,y,3.50), '3,50');
+  dimLine(new THREE.Vector3(x,y,3.50), new THREE.Vector3(x,y,6.50), '3,00');
+  dimLine(new THREE.Vector3(x,y,6.50), new THREE.Vector3(x,y,D),    '3,50');
+  dimLine(new THREE.Vector3(0,y,z+.9), new THREE.Vector3(3.50,y,z+.9), '3,50');
+  dimLine(new THREE.Vector3(3.50,y,z+.9), new THREE.Vector3(W,y,z+.9), '2,50');
   dimLine(new THREE.Vector3(x+.9,y,0), new THREE.Vector3(x+.9,y,D), '10,00 m');
+  dimLine(new THREE.Vector3(0,y,-TERAS), new THREE.Vector3(W,y,-TERAS), '6,00 m (teras)');
 }
 
 /* ---- lantai 2: dibangun bertahap, tiap bagian bisa disembunyikan ---- */
@@ -817,16 +843,16 @@ function buildLevel2(){
       L2.dinding.add(grp);
     });
   });
-  const sek = wallSegment(3.00, 2.9, T, [{ s:1.20, w:0.80, b:0, h:2.10, jenis:'pintu' }], mWall);
+  const sek = wallSegment(3.50, 2.9, T, [{ s:1.20, w:0.80, b:0, h:2.10, jenis:'pintu' }], mWall);
   sek.material.clippingPlanes = null; sek.material.clipShadows = false;
-  sek.rotation.y = -Math.PI/2; sek.position.set(2.60, base+.60, 8.20);
+  sek.rotation.y = -Math.PI/2; sek.position.set(3.00, base+.60, 6.50);
   L2.dinding.add(sek);
 
-  // 4. tangga beton 16 anak tangga menuju bukaan 1,20 x 1,40
+  // 4. tangga beton 16 anak tangga menuju rencana bukaan 0,90 x 2,60
   L2.tangga = new THREE.Group(); g.add(L2.tangga);
   const n = 16, rise = 3.15 / n, run = 0.25;
   for (let k = 0; k < n; k++)
-    box(0.90, rise, run, mBeton, 2.05, k*rise + rise/2, 4.95 - k*run - run/2, L2.tangga);
+    box(0.90, rise, run, mBeton, 3.75, k*rise + rise/2, 6.10 - k*run - run/2, L2.tangga);
 
   // 5. atap baja ringan + lisplang
   L2.atap = new THREE.Group(); g.add(L2.atap);
@@ -897,7 +923,7 @@ function renderRAB(){
     <tr><td><b>Subtotal</b></td><td class="n"></td><td class="n"></td><td class="n"><b>${nf.format(h.sub)}</b></td></tr>
     <tr><td>Cadangan 10%</td><td class="n"></td><td class="n"></td><td class="n">${nf.format(h.cad)}</td></tr>
     <tr><td><b>Total</b></td><td class="n"></td><td class="n"></td><td class="n"><b>${nf.format(h.total)}</b></td></tr>
-    <tr><td><b>Per m2 (50 m2)</b></td><td class="n"></td><td class="n"></td><td class="n"><b>${nf.format(h.perM2)}</b></td></tr>`;
+    <tr><td><b>Per m2 (60 m2)</b></td><td class="n"></td><td class="n"></td><td class="n"><b>${nf.format(h.perM2)}</b></td></tr>`;
   $('rab').innerHTML = html;
   $('cSub').textContent = rp(h.sub);
   $('cPer').textContent = rp(h.perM2) + ' / m²';
@@ -906,18 +932,18 @@ function renderRAB(){
 
 /* ============ 5b. PROGRES 1-100% (tahapan hal. 8) ============ */
 /* bobot = porsi biaya; bahan = daftar "bahan apa" saat tahap itu (dari hal. 6-8) */
-/* Perkiraan biaya lanjutan lantai 2 (50 m2 di atas dak): struktur ringan + tangga +
+/* Perkiraan biaya lanjutan lantai 2 (60 m2 di atas dak): struktur ringan + tangga +
    atap baja ringan + finishing dasar. BUKAN dari PDF - asumsi saya, ditandai di UI.
    Rentang wajar Kediri-Blitar: +/- 20%. */
-const L2_TOTAL = 235000000;
+const L2_TOTAL = 265000000;
 
 const STAGES = [
   { n:'Persiapan', bobot:0.010, hari:5,
-    bahan:['Bowplank, papan & patok ukur','Patok as 2,0 / 3,0 dan 3,6 / 3,4 m','Semen (untuk titik ukur)','Alat ukur, waterpass'],
+    bahan:['Bowplank, papan & patok ukur','Patok as 3,00 / 3,00 dan 3,50 / 3,00 / 3,50 m','Semen (untuk titik ukur)','Alat ukur, waterpass'],
     cat:'Uji tanah/sondir dulu. Jangan mulai galian sebelum hasil tanah jelas.' },
   { n:'Pondasi', bobot:0.120, hari:14,
     bahan:['Besi D12 (footplat, pedestal)','Besi D8 untuk sengkang','Semen K-250 / 50 kg','Pasir + kerikil','Batu belah / pasir lantai kerja'],
-    cat:'Footplat 100x100x25 di 9 titik, dasar ±1,2 m di tanah keras. Pedestal 25/25 dengan 8 D12.' },
+    cat:'Footplat 100x100x25 di 12 titik (grid 3,0 x 3,5/3,0/3,5), dasar ±1,2 m di tanah keras. Kolom 20/20 dengan 8 D12.' },
   { n:'Sloof + urugan', bobot:0.095, hari:12,
     bahan:['Besi D12 (sloof 4 batang)','Besi D8 sengkang','Bekisting kayu sloof','Semen, pasir, kerikil','Tanah urug + pasir padat'],
     cat:'Sloof 20/30 mengikat semua kolom. Pasang stek besi kolom SEBELUM cor.' },
@@ -925,7 +951,7 @@ const STAGES = [
     bahan:['Besi D12 kolom (8 per kolom)','Besi D8 sengkang','Bata ringan 10 cm','Perekat MU-380','Bata merah/batako 30-40 cm bawah','Bekisting kolom'],
     cat:'Dinding 30-40 cm bawah pakai bata merah/batako agar tahan air.' },
   { n:'Balok dan dak', bobot:0.250, hari:21,
-    bahan:['Beton ready mix K-250 (4,8 m3)','Besi D12 balok 3 atas + 3 bawah','Besi D10 plat dak 2 lapis','Sengkang D8-150','Bekisting dak + steger sewa','Kawat bendrat'],
+    bahan:['Beton ready mix K-250 (7,6 m3)','Besi D12 balok 3 atas + 3 bawah','Besi D10 plat dak 2 lapis','Sengkang D8-150','Bekisting dak + steger sewa','Kawat bendrat'],
     cat:'Cor dak satu hari, rawat 7 hari, bekisting bongkar ≥21 hari. Foto tulangan sebelum cor.' },
   { n:'Waterproofing dak', bobot:0.060, hari:7,
     bahan:['Membran/coating waterproofing 2 lapis','Screed kemiringan 1%','Pipa PVC 3 inci + talang','Beton decking'],
@@ -942,7 +968,7 @@ const STAGES = [
     cat:'Konsultasi ahli struktur dulu: dak lama diuji ulang untuk beban lantai 2 (beban hidup + dinding atas).' },
   { n:'Bukaan tangga + stek', lv2:true, bobot:0.020, hari:8,
     bahan:['Pemotong beton / core drill','Besi D12 stek sambungan kolom','Besi D10 tulangan tangga','Semen K-250 + curing'],
-    cat:'Buka lubang hanya di dalam bingkai balok B2 (1,20 x 1,40). Cangkul stek besi kolom yang menjulang 50 cm.' },
+    cat:'PDF 6x10: dak dicor PENUH, bukaan tangga dibobok nanti setelah ahli struktur memberi gambar kerja. B2 hanya pengaku.' },
   { n:'Kolom + ring balok lantai 2', lv2:true, bobot:0.025, hari:10,
     bahan:['Besi D12 kolom 8 batang','Besi D8 sengkang','Bekisting kolom','Semen, pasir, kerikil'],
     cat:'Sambungan besi jangan di satu titik. Kolom lantai 2 berhenti di ring balok.' },
@@ -1093,6 +1119,7 @@ function showRoom(r){
 /* ============ 6. BUILD ============ */
 buildSite();
 buildStructure();
+buildTeras();
 buildWalls();
 buildRooms();
 buildFurniture();
@@ -1102,8 +1129,8 @@ G.rebar.visible = false;
 G.dims.visible = false;
 
 $('luasNote').textContent =
-  `Luas per ruang dijumlah ${ROOMS.reduce((a,r)=>a+r.luas,0).toFixed(1)} m². Denah 5 x 8 m = 40 m²; ` +
-  'selisih karena tebal dinding 10 cm dan sekat-sekatnya.';
+  `Luas per ruang dijumlah ${(ROOMS.reduce((a,r)=>a+r.luas,0) - ROOMS.find(r=>r.id==='kmd').luas).toFixed(1)} m² ` +
+  '(KM dalam dihitung di dalam KT 2). Denah 6 x 10 m = 60 m²; teras 6 x 1,5 m di luar luas ini.';
 
 /* ============ 7. INTERAKSI ============ */
 const clock = new THREE.Clock();   // shortcut: Clock deprecated di r186, masih jalan; ganti ke THREE.Timer saat upgrade r190+
@@ -1327,84 +1354,62 @@ renderer.setAnimationLoop(tick);
 /* ============ 9. SELF-CHECK ============ */
 function selfCheck(){
   const near = (a,b,tol=1) => Math.abs(a-b) <= tol;
-  const eq = (a,b) => Math.abs(a-b) < 1e-9;
+  const same = (a,b) => Math.abs(a-b) < 1e-3;
   const errs = [];
   const area = r => (r.x1-r.x0)*(r.y1-r.y0);
   const R = id => ROOMS.find(r => r.id === id);
 
-  // ---- struktur ----
-  const foot = GRID_X.length * GRID_Y.length;          // 3 x 5 = 15
-  if (foot !== 15) errs.push('footplat ' + foot);
-  const sloof = 2*W + 2*D;                            // 2 x (5,00 + 10,00) = 30 m
-  if (!near(sloof, 30, 1e-6)) errs.push('sloof ' + sloof);
-  if (!near(W*D, 50, 1e-9)) errs.push('luas bangunan ' + W*D);
+  // ---- struktur: grid PDF 6x10 = 3 x 4 = 12 footplat ----
+  const foot = GRID_X.length * GRID_Y.length;
+  if (foot !== 12) errs.push('footplat ' + foot);
+  const sloof = 2*(W + D);                       // 2 x (6,00 + 10,00) = 32 m
+  if (!near(sloof, 32, 1e-6)) errs.push('sloof ' + sloof);
+  if (!near(W*D, 60, 1e-9)) errs.push('luas bangunan ' + W*D);
+  if (!near((W-1)*D, 50, 1e-9)) errs.push('kurang 1 m');
 
-  // ---- RAB ----
+  // ---- RAB: total harus dekat angka PDF 6x10 (Rp 267,1 jt) ----
   const h = hitungRAB();
   if (!near(h.total, h.sub * 1.1, 2)) errs.push('total ' + h.total);
-  if (!near(h.perM2, h.total / 50, 1)) errs.push('perM2 ' + h.perM2);
+  if (!near(h.perM2, h.total / 60, 1)) errs.push('perM2 ' + h.perM2);
   if (!near(h.cad / h.sub, 0.10, 1e-6)) errs.push('cadangan bukan 10%');
+  if (!near(h.total / 1e6, 267.1, 40)) errs.push('total menyimpang dari PDF 267jt: ' + (h.total/1e6).toFixed(1));
   if (document.getElementById('cTotal').textContent !== rp(h.total)) errs.push('total panel beda');
-  // jendela di RAB tidak boleh kurang dari yang digambar
+  // jumlah unit jendela di RAB harus sama dengan yang digambar
   const nJendela = WALLS.reduce((a,w) => a + w.bukaan.filter(b => b.jenis === 'jendela').length, 0);
-  const jr = RAB.flatMap(g => g.items).find(it => it[0].startsWith('Jendela'));
-  if (jr[1] < nJendela) errs.push(`jendela RAB ${jr[1]} < digambar ${nJendela}`);
+  const jr = RAB.flatMap(g => g.items).find(it => it[0].startsWith('Jendela aluminium'));
+  const jl = RAB.flatMap(g => g.items).find(it => it[0].startsWith('Jendela lebar'));
+  if (jr[1] + jl[1] < nJendela) errs.push(`jendela RAB ${jr[1]+jl[1]} < digambar ${nJendela}`);
 
-  // ---- tata letak ----
-  const tamu = R('tamu'), rug = R('rug'), kml = R('kml'), gud = R('gudang');
-  const tidur = R('tidur'), kmd = R('kmd'), dap = R('dap');
-  // versi dirapikan supaya tidak ada desimal 5,599999 di pembanding
-  tamu.y0 = 0;    tamu.y1 = 3.20;
-  rug.y0  = 3.20; rug.y1  = 5.60;
-  kml.y0  = 5.60; kml.y1  = 7.20;
-  gud.y0  = 7.20; gud.y1  = 8.20;
-  tidur.y0 = 5.60;
-  dap.y0  = 8.20; dap.y1  = 10.00;
-  const px = x => +x.toFixed(3);   // toleransi desimal 1 mm
-  const same = (a,b) => Math.abs(a-b) < 1e-3;
-  if (!same(tamu.y0, 0)) errs.push('ruang tamu bukan di depan');
-  if (!same(dap.y1, D)) errs.push('dapur bukan di belakang');
-  if (!same(tamu.y1, rug.y0)) errs.push('tamu & keluarga tidak bersambung');
-  if (!same(rug.y1, kml.y0)) errs.push('keluarga tidak bersambung ke KM luar');
-  if (!same(kml.x1, tidur.x0)) errs.push('KM luar tidak menempel kamar');
-  if (!same(gud.x0, kml.x0) || !same(gud.y0, kml.y1)) errs.push('gudang tidak menempel KM luar');
-  if (!same(dap.y0, gud.y1)) errs.push('dapur tidak menempel gudang');
-  if (!(kmd.x0 > tidur.x0 && kmd.x1 <= tidur.x1 && kmd.y0 > tidur.y0 && kmd.y1 <= tidur.y1))
-    errs.push('KM dalam tidak di dalam kamar');
+  // ---- luas per ruang (angka PDF hal. 1) ----
+  const expect = { tamu:12.25, dap:8.75, rug:13.50, kml:2.70, cuci:1.80, kt1:10.50, kt2:10.50, kmd:2.10 };
+  Object.keys(expect).forEach(id => {
+    const r = R(id);
+    if (!r) return errs.push('ruang hilang: ' + id);
+    if (!near(area(r), expect[id], .01)) errs.push(`luas ${id} ${area(r).toFixed(2)} != ${expect[id]}`);
+    if (!near(r.luas, expect[id], .01)) errs.push(`label luas ${id} ${r.luas}`);
+  });
+  // KM dalam ada DI DALAM KT 2, jadi dikurangi sekali
+  const kj = ROOMS.reduce((a,r) => a + area(r), 0) - area(R('kmd'));
+  if (!near(kj, 60, 0.01)) errs.push('jumlah luas ruang ' + kj.toFixed(2));
 
-  // ---- luas ----
-  const cekLuas = (r, luas, nama) => { if (!near(area(r), luas, .01)) errs.push(`luas ${nama} ${area(r).toFixed(2)}`); };
-  cekLuas(tamu, 16.00, 'ruang tamu');
-  cekLuas(rug,  12.00, 'ruang keluarga');
-  cekLuas(kml,   2.88, 'KM luar');
-  cekLuas(gud,   1.80, 'gudang');
-  cekLuas(tidur, 8.32, 'kamar ortu kotor');
-  cekLuas(kmd,   2.56, 'KM dalam');
-  cekLuas(dap,   9.00, 'dapur');
-  if (!near(area(tidur) - area(kmd), 5.76, .01))
-    errs.push('kamar ortu bersih ' + (area(tidur)-area(kmd)).toFixed(2));
-  // KM dalam bersarang di kamar, jadi dikurangi sekali dari total
-  const kj = ROOMS.reduce((a,r)=>a+area(r),0) - area(kmd);
-  if (!near(kj, 50, 0.01)) errs.push('jumlah luas ruang ' + kj);
+  // ---- tata letak sesuai denah PDF: depan -> belakang ----
+  const tamu = R('tamu'), dap = R('dap'), rug = R('rug'), kml = R('kml'), cuci = R('cuci');
+  const kt1 = R('kt1'), kt2 = R('kt2'), kmd = R('kmd');
+  if (!same(tamu.y0, 0) || !same(dap.y0, 0)) errs.push('tamu/dapur bukan di depan');
+  if (!same(dap.y1, 3.50) || !same(tamu.y1, 3.50)) errs.push('tamu/dapur tidak 3,50 m');
+  if (!same(dap.x0, tamu.x1)) errs.push('dapur tidak menempel tamu');
+  if (!same(rug.y0, 3.50)) errs.push('keluarga tidak mulai di z=3,50');
+  if (!same(rug.x1, kml.x0)) errs.push('keluarga tidak menempel KM luar');
+  if (!same(kml.y1, cuci.y0) || !same(cuci.x0, kml.x0)) errs.push('R. cuci tidak di bawah KM luar');
+  if (!same(rug.y1, 6.50) || !same(kt1.y0, 6.50) || !same(kt2.y0, 6.50)) errs.push('kamar tidak mulai di z=6,50');
+  if (!same(kt1.x1, kt2.x0)) errs.push('KT 1 dan KT 2 tidak bersebelahan');
+  if (!same(kt2.y1, D) || !same(kt1.y1, D)) errs.push('kamar bukan di belakang');
+  if (!(kmd.x0 > kt2.x0 && kmd.x1 <= kt2.x1 && kmd.y0 > kt2.y0 && kmd.y1 <= kt2.y1))
+    errs.push('KM dalam tidak di dalam KT 2');
+  // KM dalam & KM luar menempel di dinding yang sama (pipa satu jalur)
+  if (!same(kml.x1, kmd.x1) || !same(kml.x1, W)) errs.push('KM luar & KM dalam tidak satu jalur pipa');
 
-  // ---- furnitur harus muat ----
-  // kasur diputar: kepala di dinding x=1,80, panjang 2,00 ke arah x, lebar 1,60 ke arah z
-  if (tidur.x1 - tidur.x0 < 2.00 + 0.30) errs.push('panjang kamar tidak muat kasur 200');
-  if (tidur.y1 - tidur.y0 < 1.60 + 0.30) errs.push('lebar kamar tidak muat kasur 160');
-  const sisaDap = dap.y1 - dap.y0 - 0.60;
-  if (sisaDap < 1.00) errs.push('jalan dapur kurang dari 1,00 m: ' + sisaDap.toFixed(2));
-  if (kml.y1 - kml.y0 < 1.60 || kml.x1 - kml.x0 < 1.20) errs.push('KM luar terlalu kecil');
-  if (gud.x1 - gud.x0 < 1.20 - 1e-6 || gud.y1 - gud.y0 < 1.00 - 1e-6) errs.push('gudang terlalu kecil');
-  if (kml.y1 - kml.y0 < 1.60 - 1e-6) errs.push('KM luar kurang panjang');
-
-  // ---- tangga: bukaan 1,20 x 1,40 di dalam ruang keluarga ----
-  const stair = { x0:1.60, x1:2.80, z0:3.60, z1:5.00 };
-  if (!(stair.x0 > rug.x0 && stair.x1 < rug.x1 && stair.z0 > rug.y0 && stair.z1 < rug.y1))
-    errs.push('bukaan tangga di luar ruang keluarga');
-  if (!near(stair.x1-stair.x0, 1.20, 1e-9) || !near(stair.z1-stair.z0, 1.40, 1e-9))
-    errs.push('ukuran bukaan tangga');
-
-  // ---- tidak boleh bertumpuk (KM dalam dikecualikan) ----
+  // ---- tidak bertumpuk (KM dalam dikecualikan: bersarang) ----
   const isi = ROOMS.filter(r => r.id !== 'kmd');
   for (let a = 0; a < isi.length; a++) for (let b = a+1; b < isi.length; b++){
     const A = isi[a], B = isi[b];
@@ -1412,10 +1417,24 @@ function selfCheck(){
       errs.push(`ruang ${A.id} & ${B.id} bertumpuk`);
   }
 
+  // ---- furnitur harus muat ----
+  const fit = (r, fx, fy, nama) => {
+    if (r.x1 - r.x0 < fx - 1e-6 || r.y1 - r.y0 < fy - 1e-6) errs.push(`ruang ${nama} tidak muat ${fx}x${fy}`);
+  };
+  fit(kt1, 1.60 + .30, 2.00 + .30, 'KT 1');     // kasur 160 x 200 + jalan
+  fit(kt2, 1.60 + .30, 2.00 + .30, 'KT 2');
+  fit(kml, 1.20, 1.60, 'KM luar');               // kloset + jalan
+  fit(kmd, 1.20, 1.20, 'KM dalam');
+  fit(cuci, .60, 1.20, 'R. cuci');               // mesin cuci 60 x 60
+  fit(dap, .60 + 1.00, 2.20, 'dapur');           // deret 0,60 + jalan 1,00
+
+  // ---- teras di luar luas bangunan ----
+  if (!near(W * TERAS, 9, 1e-9)) errs.push('luas teras ' + W*TERAS);
+
   // ---- bukaan keluar dinding / bertumpuk ----
   WALLS.forEach(w => {
     const len = w.e - w.s;
-    const arr = [...w.bukaan].sort((a,b)=>a.s-b.s);
+    const arr = [...w.bukaan].sort((a,b) => a.s - b.s);
     arr.forEach((b,i) => {
       if (b.s < 0 || b.s + b.w > len + 1e-9) errs.push(`bukaan ${w.id} keluar dinding @${b.s}`);
       if (i && arr[i-1].s + arr[i-1].w > b.s + 1e-9) errs.push(`bukaan ${w.id} bertumpuk @${b.s}`);
@@ -1423,25 +1442,28 @@ function selfCheck(){
   });
 
   // ---- tiap pintu harus membuka ke ruang di kedua sisinya ----
-  // titik uji 0,30 m dari as dinding (cukup dalam untuk melewati tebal 12 cm)
   const inRoom = (r, x, z) => x > r.x0 && x < r.x1 && z > r.y0 && z < r.y1;
   const roomAt = (x, z) => ROOMS.filter(r => inRoom(r, x, z))[0];
   const pintuSalah = [];
   for (const w of WALLS.filter(q => !q.luar)) {
     for (const b of w.bukaan.filter(q => q.jenis === 'pintu')) {
       const pm = w.s + b.w/2 + (b.s || 0);
-      const ax = w.arah === 'v' ? w.off - 0.30 : pm;
-      const az = w.arah === 'h' ? w.off - 0.30 : pm;
-      const bx = w.arah === 'v' ? w.off + 0.30 : pm;
-      const bz = w.arah === 'h' ? w.off + 0.30 : pm;
+      const ax = w.arah === 'v' ? w.off - 0.30 : pm, bx = w.arah === 'v' ? w.off + 0.30 : pm;
+      const az = w.arah === 'h' ? w.off - 0.30 : pm, bz = w.arah === 'h' ? w.off + 0.30 : pm;
       if (roomAt(ax, az) && roomAt(bx, bz)) continue;
       pintuSalah.push(w.id);
     }
   }
   if (pintuSalah.length) errs.push('pintu tidak membuka ke ruang: ' + pintuSalah.join(', '));
 
+  // ---- jumlah pintu di RAB = jumlah pintu digambar ----
+  const nPintu = WALLS.reduce((a,w) => a + w.bukaan.filter(b => b.jenis === 'pintu').length, 0);
+  const pintuRAB = RAB.flatMap(g => g.items).filter(it => it[0].startsWith('Pintu')).reduce((a,it) => a + it[1], 0);
+  if (pintuRAB !== nPintu) errs.push(`pintu RAB ${pintuRAB} != digambar ${nPintu}`);
+
   if (errs.length) console.warn('[self-check] GAGAL:', JSON.stringify(errs));
-  else console.log(`[self-check] OK - ${foot} footplat, sloof ${sloof.toFixed(1)} m, ${W}x${D} m, total ${rp(h.total)}, ${rp(h.perM2)}/m2`);
+  else console.log(`[self-check] OK - ${foot} footplat, sloof ${sloof.toFixed(1)} m, ${W}x${D} m = ${W*D} m2, ` +
+    `total ${rp(h.total)}, ${rp(h.perM2)}/m2, ${nPintu} pintu / ${nJendela} jendela`);
 }
 
 renderRAB();
